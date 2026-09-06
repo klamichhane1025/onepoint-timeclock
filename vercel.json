@@ -1,10 +1,6 @@
 {
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
-  "rewrites": [
-    { "source": "/admin", "destination": "/admin-v2.html" },
-    { "source": "/accept-invite", "destination": "/accept-invite.html" }
-  ],
   "headers": [
     {
       "source": "/(.*)",
