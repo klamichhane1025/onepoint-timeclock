@@ -3,8 +3,21 @@
   const SUPABASE_KEY='sb_publishable_p20lJcecq2HN7trRTDMW8Q_iCYVnQsM';
   const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
   const show=(m,t='OnePoint',type='error')=>window.onePointMessage?window.onePointMessage(m,t,type):alert(m);
+  const closeLocation=()=>{
+    document.querySelector('#drawer')?.classList.add('hidden');
+    document.querySelector('#drawer')?.classList.remove('modal');
+    document.querySelector('#back')?.classList.add('hidden');
+  };
 
   document.addEventListener('click',async e=>{
+    const cancel=e.target.closest('#cancel');
+    if(cancel && document.querySelector('#sCode')){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeLocation();
+      return;
+    }
+
     const save=e.target.closest('#sSave');
     if(!save) return;
     e.preventDefault();
@@ -42,9 +55,7 @@
         active:true
       });
       if(error) throw error;
-      document.querySelector('#drawer')?.classList.add('hidden');
-      document.querySelector('#drawer')?.classList.remove('modal');
-      document.querySelector('#back')?.classList.add('hidden');
+      closeLocation();
       show('Location added successfully.','Location added','success');
       setTimeout(()=>location.reload(),500);
     }catch(err){
