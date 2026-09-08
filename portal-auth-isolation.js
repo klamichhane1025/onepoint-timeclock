@@ -12,10 +12,15 @@
   const storageKey=`onepoint-${portal}-auth`;
   window.__ONEPOINT_PORTAL__=portal;
   window.__ONEPOINT_AUTH_STORAGE_KEY__=storageKey;
+  let sharedClient=null;
+  let sharedUrl=null;
+  let sharedKey=null;
   api.createClient=(url,key,options={})=>{
-    const auth={...(options.auth||{})};
-    if(!auth.storageKey) auth.storageKey=storageKey;
-    return original(url,key,{...options,auth});
+    if(sharedClient&&url===sharedUrl&&key===sharedKey)return sharedClient;
+    const auth={...(options.auth||{}),storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true};
+    const client=original(url,key,{...options,auth});
+    if(!sharedClient){sharedClient=client;sharedUrl=url;sharedKey=key;window.onePointSupabase=client;}
+    return client;
   };
   api.__onepointIsolated=true;
 })();
