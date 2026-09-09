@@ -1,9 +1,10 @@
 (()=>{
   const style=document.createElement('style');
-  style.textContent=`.opMessageHost{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px}.opMessageHost.hidden{display:none!important}.opMessageBackdrop{position:absolute;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}.opMessageCard{position:relative;width:min(440px,92vw);background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:28px;box-shadow:0 28px 80px rgba(15,23,42,.28);text-align:center}.opMessageCard h3{margin:12px 0 8px;font-size:22px}.opMessageCard p{margin:0 0 20px;color:#6b7280;line-height:1.5;font-size:14px;white-space:pre-wrap}.opMessageIcon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin:0 auto;font-size:24px;font-weight:800;background:#fef2f2;color:#b91c1c}.opMessageIcon.success{background:#ecfdf5;color:#15803d}`;
+  style.textContent=`.opMessageHost{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px}.opMessageHost.hidden{display:none!important}.opMessageBackdrop{position:absolute;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}.opMessageCard{position:relative;width:min(440px,92vw);background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:28px;box-shadow:0 28px 80px rgba(15,23,42,.28);text-align:center}.opMessageCard h3{margin:12px 0 8px;font-size:22px}.opMessageCard p{margin:0 0 20px;color:#6b7280;line-height:1.5;font-size:14px;white-space:pre-wrap}.opMessageIcon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin:0 auto;font-size:25px;font-weight:900;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.opMessageIcon.success{background:#ecfdf5;color:#15803d;border-color:#bbf7d0}.opMessageIcon.warning{background:#fff7ed;color:#b45309;border-color:#fed7aa}.opMessageIcon.info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}`;
   document.head.appendChild(style);
-  function ensure(){let h=document.querySelector('#onepointMessageHost');if(h)return h;h=document.createElement('div');h.id='onepointMessageHost';h.className='opMessageHost hidden';h.innerHTML='<div class="opMessageBackdrop"></div><div class="opMessageCard" role="dialog" aria-modal="true"><div class="opMessageIcon" id="opMessageIcon">!</div><h3 id="opMessageTitle">OnePoint</h3><p id="opMessageText"></p><button class="btn primary" id="opMessageOk">OK</button></div>';document.body.appendChild(h);const close=()=>h.classList.add('hidden');h.querySelector('#opMessageOk').onclick=close;h.querySelector('.opMessageBackdrop').onclick=close;return h}
+  function ensure(){let h=document.querySelector('#onepointMessageHost');if(h)return h;h=document.createElement('div');h.id='onepointMessageHost';h.className='opMessageHost hidden';h.innerHTML='<div class="opMessageBackdrop"></div><div class="opMessageCard" role="dialog" aria-modal="true"><div class="opMessageIcon" id="opMessageIcon" aria-hidden="true">×</div><h3 id="opMessageTitle">OnePoint</h3><p id="opMessageText"></p><button class="btn primary" id="opMessageOk">OK</button></div>';document.body.appendChild(h);const close=()=>h.classList.add('hidden');h.querySelector('#opMessageOk').onclick=close;h.querySelector('.opMessageBackdrop').onclick=close;return h}
   function friendly(message){const raw=String(message||'').trim(),m=raw.toLowerCase();if(!raw)return 'Please review the information and try again.';
+    if(m.includes('edge function returned a non-2xx status code'))return 'OnePoint could not complete this request. Please try again. If the problem continues, contact support.';
     if(m.includes('stores_org_normalized_code')||m.includes('stores_organization_id_store_code')||m.includes('location code')&&m.includes('already'))return 'That Location Code is already in use. Please choose a different code.';
     if(m.includes('stores_org_normalized_name')||m.includes('stores_organization_id_name')||m.includes('location name')&&m.includes('already'))return 'That Location Name is already in use. Please choose a different name.';
     if(m.includes('employees_org_normalized_name')||m.includes('employee')&&m.includes('name')&&m.includes('already'))return 'An employee with that name already exists under this Owner. Please use a different employee name.';
@@ -15,8 +16,16 @@
     if(m.includes('row-level security')||m.includes('permission denied')||m.includes('not authorized'))return 'Your account does not have permission to make that change. Please verify you are signed into the correct portal.';
     if(m.includes('network')||m.includes('failed to fetch'))return 'OnePoint could not reach the server. Your entries were not changed. Please check your connection and try again.';
     return raw.replace(/^error:\s*/i,'').replace(/^unexpected error$/i,'Something prevented OnePoint from completing that action. Please review the information and try again.');}
-  function show(message,title='OnePoint',type='error'){const h=ensure();h.querySelector('#opMessageTitle').textContent=title;h.querySelector('#opMessageText').textContent=type==='success'?String(message||'Completed successfully.'):friendly(message);const icon=h.querySelector('#opMessageIcon');icon.textContent=type==='success'?'✓':'!';icon.className='opMessageIcon'+(type==='success'?' success':'');h.classList.remove('hidden');h.querySelector('#opMessageOk').focus()}
+  function show(message,title='OnePoint',type='error'){
+    const h=ensure(),kind=['success','warning','info'].includes(type)?type:'error';
+    h.querySelector('#opMessageTitle').textContent=title;
+    h.querySelector('#opMessageText').textContent=kind==='success'?String(message||'Completed successfully.'):friendly(message);
+    const icon=h.querySelector('#opMessageIcon');
+    const iconMap={error:'×',success:'✓',warning:'!',info:'i'};
+    icon.textContent=iconMap[kind];icon.className='opMessageIcon'+(kind==='error'?'':' '+kind);
+    h.classList.remove('hidden');h.querySelector('#opMessageOk').focus();
+  }
   window.onePointMessage=show;
   window.onePointFriendlyMessage=friendly;
-  window.alert=(message)=>show(message,'OnePoint','error');
+  window.alert=(message)=>show(message,'Error','error');
 })();
