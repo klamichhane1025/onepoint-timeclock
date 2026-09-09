@@ -1,6 +1,18 @@
 {
   "cleanUrls": false,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/timeclock/",
+      "has": [{ "type": "host", "value": "cashier.onepointsystems.io" }]
+    },
+    {
+      "source": "/activate",
+      "destination": "/timeclock/activate/",
+      "has": [{ "type": "host", "value": "cashier.onepointsystems.io" }]
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
