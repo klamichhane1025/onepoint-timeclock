@@ -30,3 +30,5 @@ Interactive frontend mock for the OnePoint Time Clock product.
 - GitHub: `klamichhane1025/onepoint-timeclock`
 - Supabase project reserved separately under the `Clockinn` organization
 - Vercel deployment intended as a separate project
+
+<!-- deployment trigger: 2026-09-09 -->
