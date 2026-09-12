@@ -1,0 +1,11 @@
+:root{--op-accent:#1D4ED8;--op-accent-hover:#1E40AF;--op-accent-soft:#DBEAFE;--op-accent-text:#1E3A8A;--op-accent-contrast:#FFFFFF;--op-positive:#166534;--op-warning:#92400E;--op-danger:#B91C1C}
+html[data-op-theme="blue"]{--op-accent:#1D4ED8;--op-accent-hover:#1E40AF;--op-accent-soft:#DBEAFE;--op-accent-text:#1E3A8A}
+html[data-op-theme="emerald"]{--op-accent:#047857;--op-accent-hover:#065F46;--op-accent-soft:#D1FAE5;--op-accent-text:#064E3B}
+html[data-op-theme="violet"]{--op-accent:#6D28D9;--op-accent-hover:#5B21B6;--op-accent-soft:#EDE9FE;--op-accent-text:#4C1D95}
+html[data-op-theme="amber"]{--op-accent:#B45309;--op-accent-hover:#92400E;--op-accent-soft:#FEF3C7;--op-accent-text:#78350F}
+html[data-op-theme] .btn.primary,html[data-op-theme] button.primary{background:var(--op-accent)!important;border-color:var(--op-accent)!important;color:var(--op-accent-contrast)!important}
+html[data-op-theme] .btn.primary:hover,html[data-op-theme] button.primary:hover{background:var(--op-accent-hover)!important;border-color:var(--op-accent-hover)!important}
+html[data-op-theme] .nav button.active,html[data-op-theme] #nav button.active{background:var(--op-accent-soft)!important;color:var(--op-accent-text)!important;border-color:var(--op-accent)!important}
+html[data-op-theme] .eyebrow,html[data-op-theme] a{color:var(--op-accent)}
+html[data-op-theme] input:focus,html[data-op-theme] select:focus,html[data-op-theme] textarea:focus{outline-color:var(--op-accent)!important;border-color:var(--op-accent)!important}
+.opThemeSwatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.opThemeChoice{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--color-border,#CBD5E1);border-radius:10px;background:#fff;cursor:pointer}.opThemeChoice.active{box-shadow:0 0 0 2px var(--op-accent);border-color:var(--op-accent)}.opThemeDot{width:18px;height:18px;border-radius:50%;display:inline-block}.opThemeDot.blue{background:#1D4ED8}.opThemeDot.emerald{background:#047857}.opThemeDot.violet{background:#6D28D9}.opThemeDot.amber{background:#B45309}
