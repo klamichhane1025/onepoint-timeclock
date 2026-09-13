@@ -8,14 +8,17 @@
   else if(path==='/owner') portal='owner';
   else if(path==='/manager') portal='manager';
   else if(path==='/accept-invite') portal='invite';
-  else if(path==='/timeclock/activate') portal=new URLSearchParams(location.search).get('portal')==='manager'?'manager':'owner';
+  else if(path==='/timeclock/activate'){
+    const requested=new URLSearchParams(location.search).get('portal');
+    portal=requested==='admin'?'admin':requested==='manager'?'manager':'owner';
+  }
 
   const storageKey=`onepoint-${portal}-auth`;
-  const sessionOnly=portal==='owner'||portal==='manager';
+  const sessionOnly=portal==='admin'||portal==='owner'||portal==='manager';
   const storage=sessionOnly?window.sessionStorage:window.localStorage;
 
-  // Remove legacy persistent Owner/Manager sessions so an old localStorage login
-  // cannot silently restore after this shared-device security change.
+  // Admin, Owner and Manager sessions are intentionally tab/browser-session only.
+  // Remove any legacy persistent copy so reopening the site requires sign-in.
   if(sessionOnly){
     try{window.localStorage.removeItem(storageKey)}catch{}
   }
