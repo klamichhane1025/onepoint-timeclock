@@ -21,9 +21,9 @@ function decorate(){
      cell.setAttribute('role','button');cell.setAttribute('tabindex','0');
    }
  }
- const note=[...document.querySelectorAll('#content .head .muted')].find(x=>/Double-click an active row|Click any active timesheet/i.test(x.textContent||''));
+ const note=[...document.querySelectorAll('#content .head .muted')].find(x=>/Double-click an active row|Click any active timesheet|Hover over Clock In/i.test(x.textContent||''));
  if(note)note.textContent='Hover over Clock In or Clock Out, then click the time to edit it directly.';
- if(!$('#opPunchEditCss')){const s=document.createElement('style');s.id='opPunchEditCss';s.textContent=`.opPunchEditable{cursor:text!important;position:relative;border-radius:8px;transition:background .14s,box-shadow .14s}.opPunchEditable:hover{background:var(--op-accent-soft,#DBEAFE);box-shadow:inset 0 0 0 1px var(--op-accent,#1D4ED8)}.opPunchEditable:hover:after{content:'Edit';position:absolute;right:6px;top:4px;font-size:10px;font-weight:700;color:var(--op-accent-text,#1E3A8A)}.opPunchEditor{min-width:250px}.opPunchEditor input[type="datetime-local"]{width:100%;min-width:210px}.opPunchEditor .opPunchReason{margin-top:6px;width:100%;min-width:210px}.opPunchEditor .opPunchActions{display:flex;gap:6px;margin-top:6px}.opPunchEditor .btn{padding:6px 10px;font-size:12px}`;document.head.appendChild(s)}
+ if(!$('#opPunchEditCss')){const s=document.createElement('style');s.id='opPunchEditCss';s.textContent=`.opPunchEditable{cursor:text!important;position:relative;border-radius:8px;transition:background .14s,box-shadow .14s}.opPunchEditable:hover{background:var(--op-accent-soft,#DBEAFE);box-shadow:inset 0 0 0 1px var(--op-accent,#1D4ED8)}.opPunchEditable:hover:after{content:'Edit';position:absolute;right:6px;top:4px;font-size:10px;font-weight:700;color:var(--op-accent-text,#1E3A8A)}.opPunchEditor{display:flex;align-items:center;gap:5px;min-width:0;white-space:nowrap}.opPunchEditor input[type="datetime-local"]{width:168px;min-width:168px;height:30px;padding:3px 6px;font-size:12px}.opPunchEditor .opPunchReason{width:128px;min-width:100px;height:30px;padding:3px 6px;font-size:12px}.opPunchEditor .btn{height:30px;padding:4px 8px;font-size:11px;line-height:1}.opPunchEditable:has(.opPunchEditor):after{display:none}`;document.head.appendChild(s)}
 }
 
 async function openCell(cell){
@@ -36,9 +36,8 @@ async function openCell(cell){
    if(error)throw error;if(!e)throw new Error('Clock record not found.');if(e.is_void)throw new Error('Restore this record before editing it.');
    activeCell=cell;
    const current=kind==='in'?e.actual_clock_in:e.actual_clock_out;
-   cell.dataset.originalHtml=cell.innerHTML;
-   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toLocalInput(current)}"><input class="opPunchReason" type="text" placeholder="Correction reason (optional)"><div class="opPunchActions"><button class="btn primary opPunchSave">Save</button><button class="btn secondary opPunchCancel">Cancel</button></div></div>`;
-   cell.querySelector('.opPunchValue')?.focus();
+   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toLocalInput(current)}"><input class="opPunchReason" type="text" placeholder="Reason (optional)"><button class="btn primary opPunchSave" title="Save">✓</button><button class="btn secondary opPunchCancel" title="Cancel">✕</button></div>`;
+   const input=cell.querySelector('.opPunchValue');input?.focus();input?.select?.();
  }catch(err){show(err?.message||String(err))}finally{busy=false}
 }
 function findCell(id,kind){const row=$(`#v4Rows tr[data-entry-id="${CSS.escape(id)}"]`);return row?.children[kind==='in'?4:5]||null}
@@ -48,7 +47,7 @@ async function saveCell(cell){
  const value=cell.querySelector('.opPunchValue')?.value||'',reason=cell.querySelector('.opPunchReason')?.value.trim()||'';
  if(kind==='in'&&!value)return show('Clock In cannot be blank.');
  const changed=fromLocalInput(value);if(value&&(!changed||Number.isNaN(changed.getTime())))return show('Enter a valid date and time.');
- const btn=cell.querySelector('.opPunchSave'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Saving…'}
+ const btn=cell.querySelector('.opPunchSave');if(btn){btn.disabled=true;btn.textContent='…'}
  try{
    const[{data:e,error},{data:{session}}]=await Promise.all([sb.from('time_entries').select('actual_clock_in,actual_clock_out,is_void').eq('id',id).maybeSingle(),sb.auth.getSession()]);
    if(error)throw error;if(!e)throw new Error('Clock record not found.');if(e.is_void)throw new Error('Restore this record before editing it.');if(!session)throw new Error('Your Owner session expired. Sign in again.');
@@ -58,7 +57,7 @@ async function saveCell(cell){
    const r=await fetch(`${SUPABASE_URL}/functions/v1/manage-time-entry`,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${session.access_token}`},body:JSON.stringify({action:'edit_entry',entry_id:id,actual_clock_in:inVal.toISOString(),actual_clock_out:outVal?outVal.toISOString():null,reason})}),d=await r.json().catch(()=>({}));
    if(!r.ok||d.error)throw new Error(d.error||'Unable to save the correction.');
    activeCell=null;show(d.warning?`Timesheet corrected. ${d.warning}`:'Time updated successfully.','Timesheet','success');window.onePointOwnerPayroll?.render?.();
- }catch(err){show(err?.message||String(err));if(btn){btn.disabled=false;btn.textContent=old||'Save'}}
+ }catch(err){show(err?.message||String(err));if(btn){btn.disabled=false;btn.textContent='✓'}}
 }
 
 document.addEventListener('click',e=>{
@@ -71,8 +70,9 @@ document.addEventListener('click',e=>{
 },true);
 document.addEventListener('keydown',e=>{
  const cell=e.target.closest?.('.opPunchEditable');if(!cell)return;
- if((e.key==='Enter'||e.key===' ')&&!cell.querySelector('.opPunchEditor')){e.preventDefault();openCell(cell)}
- if(e.key==='Escape'&&cell.querySelector('.opPunchEditor')){e.preventDefault();cancelCell(cell)}
+ if((e.key==='Enter'||e.key===' ')&&!cell.querySelector('.opPunchEditor')){e.preventDefault();openCell(cell);return}
+ if(e.key==='Escape'&&cell.querySelector('.opPunchEditor')){e.preventDefault();cancelCell(cell);return}
+ if(e.key==='Enter'&&cell.querySelector('.opPunchEditor')&&e.target.matches('.opPunchValue,.opPunchReason')){e.preventDefault();saveCell(cell)}
 },true);
 window.addEventListener('click',e=>{if(e.target.closest('#nav [data-tab="timesheets"],#v4Apply,#v4Reset,#v4History,.sortHeader,.v4Employee,.v4Store')){setTimeout(decorate,120);setTimeout(decorate,420)}},false);
 setTimeout(decorate,1000);setTimeout(decorate,1800);
