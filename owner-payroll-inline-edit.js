@@ -37,7 +37,7 @@ async function openCell(cell){
    activeCell=cell;
    const current=kind==='in'?e.actual_clock_in:e.actual_clock_out;
    cell.dataset.originalHtml=cell.innerHTML;
-   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toLocalInput(current)}"><input class="opPunchReason" type="text" placeholder="Correction reason *"><div class="opPunchActions"><button class="btn primary opPunchSave">Save</button><button class="btn secondary opPunchCancel">Cancel</button></div></div>`;
+   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toLocalInput(current)}"><input class="opPunchReason" type="text" placeholder="Correction reason (optional)"><div class="opPunchActions"><button class="btn primary opPunchSave">Save</button><button class="btn secondary opPunchCancel">Cancel</button></div></div>`;
    cell.querySelector('.opPunchValue')?.focus();
  }catch(err){show(err?.message||String(err))}finally{busy=false}
 }
@@ -47,7 +47,6 @@ async function saveCell(cell){
  const row=cell?.closest('tr.v4EditableRow'),id=row?.dataset.entryId,kind=cell?.dataset.punchKind;if(!id||!kind)return;
  const value=cell.querySelector('.opPunchValue')?.value||'',reason=cell.querySelector('.opPunchReason')?.value.trim()||'';
  if(kind==='in'&&!value)return show('Clock In cannot be blank.');
- if(!reason)return show('Enter a correction reason before saving.');
  const changed=fromLocalInput(value);if(value&&(!changed||Number.isNaN(changed.getTime())))return show('Enter a valid date and time.');
  const btn=cell.querySelector('.opPunchSave'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Saving…'}
  try{
