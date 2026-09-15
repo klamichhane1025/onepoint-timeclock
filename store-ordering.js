@@ -31,9 +31,9 @@
   }
   function locationRows(stores){
     const rows=$$('#content>.card .list>.row');if(!rows.length)return[];
-    if(rows.length===stores.length){rows.forEach((r,i)=>r.dataset.opStoreId=stores[i].id);return rows}
+    if(rows.length===stores.length){rows.forEach((r,i)=>{if(!r.dataset.opStoreId)r.dataset.opStoreId=stores[i].id});return rows}
     const unused=new Set(stores.map(s=>s.id));
-    rows.forEach(r=>{const code=(r.querySelector('.muted')?.textContent||'').split('·')[0].trim(),matches=stores.filter(s=>unused.has(s.id)&&String(s.store_code||'').trim()===code);if(matches.length===1){r.dataset.opStoreId=matches[0].id;unused.delete(matches[0].id)}});return rows.filter(r=>r.dataset.opStoreId)
+    rows.forEach(r=>{if(r.dataset.opStoreId){unused.delete(r.dataset.opStoreId);return}const code=(r.querySelector('.muted')?.textContent||'').split('·')[0].trim(),matches=stores.filter(s=>unused.has(s.id)&&String(s.store_code||'').trim()===code);if(matches.length===1){r.dataset.opStoreId=matches[0].id;unused.delete(matches[0].id)}});return rows.filter(r=>r.dataset.opStoreId)
   }
   function overviewItems(){return path==='/owner'?$$('.opPeriodGrid>.opPeriodTile[data-store]').map(x=>(x.dataset.opStoreId=x.dataset.store,x)):$$('.apGrid>.apTile[data-ap-store]').map(x=>(x.dataset.opStoreId=x.dataset.apStore,x))}
   function addHint(mode){const h=$('#content .head>div');if(!h||h.querySelector('.opOrderHint'))return;const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag locations to reorder. ${mode==='overview'?'The same order is used on Locations.':'The same order is used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)}
