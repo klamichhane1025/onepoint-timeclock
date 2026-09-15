@@ -59,6 +59,7 @@ Database constraints / guards:
 - During that 60-minute grace period the employee remains clocked in and may still physically clock out; the same store-close cap above applies if that punch is late.
 - If the shift is still open after the full 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
 - Automatic missed-clock-out finalization does not fabricate a physical punch: `actual_clock_out` remains distinguishable from the system-applied payable closing time.
+- Once a missed shift is system-finalized, it is no longer considered an active/open shift for concurrency checks and must not block that employee from clocking in at another authorized store under the same Owner.
 
 ## Location ordering
 - Each Owner can drag and drop accessible locations into a preferred display order.
