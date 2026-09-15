@@ -3,12 +3,13 @@
   if(!api?.createClient||api.__onepointIsolated)return;
   const original=api.createClient.bind(api);
   const path=location.pathname.replace(/\/+$/,'')||'/';
+  const cashierActivation=location.hostname==='cashier.onepointsystems.io'&&path==='/activate';
   let portal='shared';
   if(path==='/admin') portal='admin';
   else if(path==='/owner') portal='owner';
   else if(path==='/manager') portal='manager';
   else if(path==='/accept-invite') portal='invite';
-  else if(path==='/timeclock/activate'){
+  else if(path==='/timeclock/activate'||cashierActivation){
     const requested=new URLSearchParams(location.search).get('portal');
     portal=requested==='admin'?'admin':requested==='manager'?'manager':'owner';
   }
