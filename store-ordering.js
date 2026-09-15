@@ -36,7 +36,12 @@
     rows.forEach(r=>{if(r.dataset.opStoreId){unused.delete(r.dataset.opStoreId);return}const code=(r.querySelector('.muted')?.textContent||'').split('·')[0].trim(),matches=stores.filter(s=>unused.has(s.id)&&String(s.store_code||'').trim()===code);if(matches.length===1){r.dataset.opStoreId=matches[0].id;unused.delete(matches[0].id)}});return rows.filter(r=>r.dataset.opStoreId)
   }
   function overviewItems(){return path==='/owner'?$$('.opPeriodGrid>.opPeriodTile[data-store]').map(x=>(x.dataset.opStoreId=x.dataset.store,x)):$$('.apGrid>.apTile[data-ap-store]').map(x=>(x.dataset.opStoreId=x.dataset.apStore,x))}
-  function addHint(mode){const h=$('#content .head>div');if(!h||h.querySelector('.opOrderHint'))return;const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag locations to reorder. ${mode==='overview'?'The same order is used on Locations.':'The same order is used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)}
+  function addHint(mode){
+    let h=null;
+    if(mode==='overview'){const grid=path==='/owner'?$('.opPeriodGrid'):$('.apGrid');h=grid?.closest('.card')?.querySelector('.head>div')||null}
+    else h=$('#content>.card .head>div');
+    if(!h||h.querySelector('.opOrderHint'))return;const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag locations to reorder. ${mode==='overview'?'The same order is used on Locations.':'The same order is used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)
+  }
   function addHandle(item){if(item.querySelector(':scope>.opStoreDragHandle'))return;const h=document.createElement('span');h.className='opStoreDragHandle';h.textContent='⋮⋮';h.title='Drag to reorder';h.setAttribute('aria-label','Drag location to reorder');item.insertAdjacentElement('afterbegin',h)}
   function sortItems(items,stores,order){
     const fallback=new Map(stores.map((s,i)=>[s.id,i]));
