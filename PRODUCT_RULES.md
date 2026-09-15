@@ -38,6 +38,10 @@ Database constraints / guards:
 - Owner and Manager Overview show one live `Clocked In Now` metric containing only the number of employees currently clocked in.
 - The live metric updates when employees clock in or out; it does not add a detailed live-attendance panel to Timesheets & Payroll.
 - Platform Admin Owner View does not receive this Owner/Manager live-count card.
+- If an employee remains clocked in at that store's captured scheduled closing time, OnePoint waits 60 minutes before treating the shift as a missed clock-out.
+- During the 60-minute grace period, the employee may still clock out normally; that employee punch remains the actual clock-out record.
+- If the shift is still open after the 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
+- Automatic missed-clock-out finalization does not fabricate a physical punch: `actual_clock_out` remains distinguishable from the system-applied payable closing time.
 
 ## Location ordering
 - Each Owner can drag and drop accessible locations into a preferred display order.
