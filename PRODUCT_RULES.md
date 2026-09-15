@@ -23,11 +23,27 @@ Database constraints / guards:
 - UNIQUE (organization_id, normalized_employee_name)
 - Shared-roster name-conflict guards across active `employee_org_shares`.
 
-## Time history
+## PIN and password entry
+- Password and PIN fields provide a visibility control so the user can temporarily reveal the entered secret.
+- When an Owner or Platform Admin creates a new employee PIN, the PIN must be entered twice before the employee can be saved.
+- When an employee PIN is changed, both new-PIN fields must either be blank to keep the current PIN or contain the same valid 4–8 digit PIN.
+- PIN confirmation shows a live green `Match` state when both entries match and a red mismatch state when they do not.
+- PIN confirmation does not create a second credential; only the single canonical employee PIN is stored.
+
+## Time history and live attendance
 - Clock-in/out history is retained indefinitely in the product model.
 - Removing a clock record from active timesheets is a soft delete/void only.
 - Deleted records remain in History & Audit and can be restored.
 - Manual edits retain original values and audit metadata.
+- A successful employee clock-in must appear in the Owner portal and Platform Admin Owner View without requiring a manual page refresh.
+- Active/open shifts are shown as `Clocked In` with a running elapsed/payable duration. DFW Logic continues to cap payable running time at the captured scheduled close.
+- Clock-in/out changes use Supabase Realtime to refresh Overview and Timesheets & Payroll while those views are open.
+
+## Location ordering
+- Each Owner can drag and drop accessible locations into a preferred display order.
+- The order is persistent per Owner organization and is shared between the Locations page and Overview store cards.
+- Shared locations can participate in the receiving Owner's display order without changing the source Owner's order or ownership.
+- Platform Admin Owner View uses the selected Owner's same stored location order and may adjust that order with Platform Admin authority.
 
 ## Payroll
 - Employee pay rate is optional.
