@@ -12,22 +12,25 @@
 - Platform Admin remains browser-session scoped on ordinary devices unless another explicit security policy is adopted.
 - A browser registered as a OnePoint POS/cashier device keeps its trusted Time Clock device credential, but it must not persist Owner, Manager, or Platform Admin portal authentication.
 - A fresh navigation from a registered POS device into Owner, Manager, or Admin requires a fresh human login. Reloading an already-open authenticated portal page does not intentionally interrupt the user mid-task.
+- Platform Admin may activate a new POS from either the Time Clock activation route or the cashier-domain `/activate` route; both must require fresh Platform Admin authentication on a registered POS.
 
 ## Employee identity
 - Employee identity is scoped to the organization, never globally.
-- Employee ID must be unique within one organization.
-- Normalized employee name must be unique within one organization.
+- Employee ID must be unique among non-deleted employees within one organization.
+- Normalized employee name must be unique among non-deleted employees within one organization.
 - The same employee ID or name may exist in a completely unrelated organization.
 - Once organizations are connected by an active shared-store/employee relationship, every employee visible in the receiving Owner's combined roster (owned + shared employees) must have a unique normalized name so payroll, timesheets, and employee selection remain unambiguous.
 - If a shared-roster name conflict exists, one employee must be renamed before the share/assignment can continue.
 - Sharing an employee never creates a second employee account. The shared employee keeps the same canonical employee record, Employee ID, PIN, and login across participating locations.
 - A receiving Owner must not create a duplicate employee record merely to make a shared employee available.
 - Automatic employee IDs increment from the highest employee ID within that organization only.
-- Deleted/deactivated employees do not erase clock history.
+- Deleting an employee is a soft delete: the canonical employee row and all historical punches/audit history remain intact.
+- Once an employee is deleted, that Employee ID and normalized name may be reused for a new employee in the same organization.
+- An inactive but not deleted employee continues to reserve its Employee ID and normalized name so it can be safely reactivated later.
 
 Database constraints / guards:
-- UNIQUE (organization_id, employee_id)
-- UNIQUE (organization_id, normalized_employee_name)
+- Partial UNIQUE `(organization_id, employee_number)` where `status <> 'deleted'`.
+- Partial UNIQUE `(organization_id, lower(btrim(name)))` where `status <> 'deleted'`.
 - Shared-roster name-conflict guards across active `employee_org_shares`.
 
 ## PIN and password entry
