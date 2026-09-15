@@ -1,0 +1,51 @@
+(()=>{
+  if(window.__onePointLiveWorkforce)return;
+  window.__onePointLiveWorkforce=true;
+  const path=location.pathname.replace(/\/+$/,'');
+  if(!['/owner','/admin'].includes(path))return;
+  const URL='https://eomgnaulupqiwjzcimqt.supabase.co',KEY='sb_publishable_p20lJcecq2HN7trRTDMW8Q_iCYVnQsM';
+  const sb=window.onePointSupabase||window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+  const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
+  const style=document.createElement('style');
+  style.textContent=`.opLiveWorkforce{border-color:rgba(22,128,61,.18)!important;background:linear-gradient(180deg,rgba(236,253,243,.78),rgba(255,255,255,.95))!important}.opLiveHead{display:flex;align-items:center;gap:8px}.opLiveDot{width:8px;height:8px;border-radius:50%;background:#16803d;box-shadow:0 0 0 5px rgba(22,128,61,.10)}.opLiveBadge{background:#ecfdf3!important;color:#166534!important;border:1px solid rgba(22,128,61,.14)}.opLiveRows{display:grid;gap:0;border:1px solid var(--pup-line,rgba(60,60,67,.14));border-radius:12px;overflow:hidden;background:#fff}.opLiveRow{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(130px,1fr) 160px 115px 120px;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--pup-line,rgba(60,60,67,.14));font-size:12px}.opLiveRow:last-child{border-bottom:0}.opLiveRow strong{font-size:12.5px}.opLiveValue{font-variant-numeric:tabular-nums}.opLiveEmpty{padding:10px 12px;color:var(--pup-secondary,#6e6e73);font-size:12px}.opLiveTableState{display:inline-flex;align-items:center;gap:5px;color:#166534;font-weight:700}.opLiveTableState:before{content:'';width:7px;height:7px;border-radius:50%;background:#16803d}@media(max-width:800px){.opLiveRow{grid-template-columns:1fr 1fr}.opLiveRow>div:nth-child(n+3){font-size:11px}.opLiveRow .opLiveWage{display:none}}`;
+  document.head.appendChild(style);
+  let snapshot=null,orgId='',allowedStores=new Set(),refreshing=false,pending=false,channel=null;
+  async function session(){const{data:{session}}=await sb.auth.getSession();return session}
+  async function ownerContext(){const s=await session();if(!s)return null;const{data,error}=await sb.from('organization_users').select('organization_id').eq('user_id',s.user.id).eq('role','owner').eq('active',true).maybeSingle();if(error||!data)return null;return{session:s,organization_id:data.organization_id}}
+  async function ownerSnapshot(){const c=await ownerContext();if(!c)return null;orgId=c.organization_id;const r=await fetch(`${URL}/functions/v1/shared-store-access`,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${c.session.access_token}`},body:JSON.stringify({action:'owner_payroll_snapshot'})}),d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load live attendance.');return{organization:d.organization_id||orgId,stores:d.stores||[],employees:d.employees||[],entries:d.entries||[],pay_rates:d.pay_rates||[]}}
+  async function adminSnapshot(){const selected=sessionStorage.getItem('onepoint_admin_selected_org')||'';if(!selected)return null;const s=await session();if(!s)return null;orgId=selected;const r=await fetch(`${URL}/functions/v1/admin-owner-parity`,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${s.access_token}`},body:JSON.stringify({action:'snapshot',organization_id:selected})}),d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load live attendance.');return{organization:selected,stores:d.stores||[],employees:d.employees||[],entries:d.time_entries||[],pay_rates:d.pay_rates||[]}}
+  async function load(){snapshot=path==='/owner'?await ownerSnapshot():await adminSnapshot();allowedStores=new Set((snapshot?.stores||[]).map(x=>x.id));return snapshot}
+  function activeTab(){if(path==='/owner'){if($('#nav [data-tab="overview"].active'))return'overview';if($('#nav [data-tab="timesheets"].active'))return'timesheets'}else{if($('#nav [data-aw-tab="overview"].active'))return'overview';if($('#nav [data-aw-tab="timesheets"].active'))return'timesheets'}return''}
+  function employee(id){return snapshot?.employees?.find(x=>x.id===id)}
+  function store(id){return snapshot?.stores?.find(x=>x.id===id)}
+  function effectivePay(x){const r=(snapshot?.pay_rates||[]).find(v=>v.employee_id===x.employee_id&&v.store_id===x.store_id);return{type:r?.pay_type||x.pay_type_snapshot||null,rate:r?.pay_rate??x.pay_rate_snapshot??null}}
+  function payableHours(x,now=new Date()){
+    if(!x.payable_clock_in)return 0;const start=new Date(x.payable_clock_in);let end=x.payable_clock_out?new Date(x.payable_clock_out):now;
+    if(!x.payable_clock_out&&x.payroll_logic_snapshot==='dfw'&&x.scheduled_close_at){const cap=new Date(x.scheduled_close_at);if(end>cap)end=cap}
+    return Math.max(0,(end-start)/36e5)
+  }
+  function actualElapsed(x,now=new Date()){return Math.max(0,(now-new Date(x.actual_clock_in))/36e5)}
+  function openEntries(){return(snapshot?.entries||[]).filter(x=>!x.is_void&&!x.actual_clock_out&&!x.missed_clock_out&&allowedStores.has(x.store_id)).sort((a,b)=>new Date(a.actual_clock_in)-new Date(b.actual_clock_in))}
+  function time(v){return v?new Date(v).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—'}
+  function duration(h){const m=Math.max(0,Math.floor(h*60)),hh=Math.floor(m/60),mm=m%60;return`${hh}h ${String(mm).padStart(2,'0')}m`}
+  function cardHtml(){const rows=openEntries(),now=new Date();return`<div class="card opLiveWorkforce" data-op-live-workforce><div class="head"><div><div class="opLiveHead"><span class="opLiveDot" aria-hidden="true"></span><h2>Clocked In Now</h2><span class="badge opLiveBadge">LIVE · ${rows.length}</span></div><div class="muted">Updates automatically when employees clock in or out. Running payroll time is capped at scheduled close when DFW Logic applies.</div></div></div>${rows.length?`<div class="opLiveRows">${rows.map(x=>{const e=employee(x.employee_id),s=store(x.store_id),p=effectivePay(x),h=payableHours(x,now),w=p.type==='hourly'&&p.rate!=null?h*Number(p.rate):null;return`<div class="opLiveRow" data-live-entry="${x.id}"><div><strong>${esc(e?.name||'Employee')}</strong><div class="muted">#${esc(e?.employee_number||'')}</div></div><div><strong>${esc(s?.name||s?.store_code||'Location')}</strong><div class="muted">${esc(s?.store_code||'')}</div></div><div>Clocked in <b>${esc(time(x.actual_clock_in))}</b></div><div class="opLiveValue" data-live-elapsed="${x.id}">${duration(actualElapsed(x,now))}</div><div class="opLiveValue opLiveWage" data-live-pay="${x.id}">${w==null?(p.type==='monthly'?'Monthly salary':'Pay rate needed'):money(w)}</div></div>`}).join('')}</div>`:'<div class="opLiveEmpty">No employees are currently clocked in.</div>'}</div>`}
+  function placeCard(){const tab=activeTab(),root=$('#content');if(!tab||!root||!snapshot)return;root.querySelector('[data-op-live-workforce]')?.remove();const tmp=document.createElement('div');tmp.innerHTML=cardHtml();const card=tmp.firstElementChild;if(!card)return;const first=root.firstElementChild;if(first)root.insertBefore(card,first);else root.appendChild(card);decorateOpenRows()}
+  function decorateOpenRows(){const now=new Date();for(const x of openEntries()){
+    let row=$(`tr[data-entry-id="${CSS.escape(x.id)}"]`)||$(`tr[data-id="${CSS.escape(x.id)}"]`);if(!row)continue;const cells=row.children;if(cells.length<9)continue;
+    const clockOutIndex=path==='/owner'?5:4,hoursIndex=path==='/owner'?6:5,wagesIndex=path==='/owner'?8:7;
+    if(cells[clockOutIndex])cells[clockOutIndex].innerHTML='<span class="opLiveTableState">Clocked In</span>';
+    if(cells[hoursIndex])cells[hoursIndex].textContent=payableHours(x,now).toFixed(2);
+    const p=effectivePay(x),w=p.type==='hourly'&&p.rate!=null?payableHours(x,now)*Number(p.rate):null;if(cells[wagesIndex]&&w!=null)cells[wagesIndex].textContent=money(w)
+  }}
+  function tick(){if(!snapshot)return;const now=new Date();for(const x of openEntries()){$(`[data-live-elapsed="${CSS.escape(x.id)}"]`)?.replaceChildren(document.createTextNode(duration(actualElapsed(x,now))));const p=effectivePay(x),w=p.type==='hourly'&&p.rate!=null?payableHours(x,now)*Number(p.rate):null;if(w!=null)$(`[data-live-pay="${CSS.escape(x.id)}"]`)?.replaceChildren(document.createTextNode(money(w)))}decorateOpenRows()}
+  async function rerenderCore(tab){if(path==='/owner'){if(tab==='overview')await window.onePointOwnerDashboard?.render?.();else if(tab==='timesheets')await window.onePointOwnerPayroll?.render?.()}else if(tab)await window.onePointAdminOwnerParity?.render?.(tab)}
+  async function refresh(){if(refreshing){pending=true;return}refreshing=true;try{const tab=activeTab();await load();if(tab){await rerenderCore(tab);await new Promise(r=>setTimeout(r,80));await load();placeCard()}}catch(e){console.warn('Live workforce:',e?.message||e)}finally{refreshing=false;if(pending){pending=false;setTimeout(refresh,80)}}}
+  async function initial(){try{await load();placeCard()}catch(e){console.warn('Live workforce:',e?.message||e)}}
+  function subscribe(){if(channel)return;channel=sb.channel(`onepoint-live-time-${path.replace('/','')}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',{event:'*',schema:'public',table:'time_entries'},payload=>{const storeId=payload.new?.store_id||payload.old?.store_id;if(storeId&&allowedStores.size&&!allowedStores.has(storeId))return;refresh()}).subscribe()}
+  document.addEventListener('click',e=>{if(e.target.closest('#nav button,.awOpen'))setTimeout(initial,450)},true);
+  const observer=new MutationObserver(()=>{if(activeTab()&&!$('[data-op-live-workforce]'))setTimeout(()=>snapshot?placeCard():initial(),80)});observer.observe(document.documentElement,{subtree:true,childList:true});
+  setInterval(tick,15000);setTimeout(()=>{initial();subscribe()},1000);
+  window.onePointLiveWorkforce={refresh,render:placeCard};
+})();
