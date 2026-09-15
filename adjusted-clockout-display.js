@@ -67,12 +67,15 @@
         for(const tr of table.querySelectorAll('tbody tr')){
           const cells=[...tr.children];if(!cells[outIndex])continue;
           let entry=byId.get(rowId(tr));if(!entry)entry=entries.find(x=>matches(x,tr,heads));if(!entry?.payable_clock_out)continue;
-          const cell=cells[outIndex],effective=fmt(entry.payable_clock_out);
-          cell.innerHTML=`<span class="opAdjustedClockOut" title="${entry.actual_clock_out?`Adjusted to store closing time. Actual employee punch: ${fmt(entry.actual_clock_out)}`:'System-applied store closing time; employee did not physically punch out.'}">${effective} <span class="opAdjustedMark">*</span></span>`;
-          cell.dataset.opAdjustedClockOut='1';adjusted++;
+          const cell=cells[outIndex],effective=fmt(entry.payable_clock_out),expected=`${effective} *`;
+          adjusted++;
+          if(cell.dataset.opAdjustedClockOut==='1'&&cell.textContent.trim()===expected)continue;
+          const title=entry.actual_clock_out?`Adjusted to store closing time. Actual employee punch: ${fmt(entry.actual_clock_out)}`:'System-applied store closing time; employee did not physically punch out.';
+          cell.innerHTML=`<span class="opAdjustedClockOut" title="${title}">${effective} <span class="opAdjustedMark">*</span></span>`;
+          cell.dataset.opAdjustedClockOut='1';
         }
         const wrap=table.closest('.table')||table.parentElement;if(adjusted&&wrap&&!wrap.parentElement?.querySelector(':scope > .opAdjustedClockLegend')){
-          const note=document.createElement('div');note.className='muted opAdjustedClockLegend';note.textContent='* Clock-out adjusted to the store’s scheduled closing time. The employee’s actual punch remains preserved in the audit record.';wrap.insertAdjacentElement('afterend',note);
+          const note=document.createElement('div');note.className='muted opAdjustedClockLegend';note.textContent='* Clock-out adjusted to the store’s scheduled closing time. If the employee punched out later, the actual punch remains preserved in audit history.';wrap.insertAdjacentElement('afterend',note);
         }
       }
     }catch(e){console.warn('Adjusted clock-out display:',e?.message||e)}finally{loading=false}
@@ -81,6 +84,6 @@
   function schedule(force=false,ms=120){clearTimeout(timer);timer=setTimeout(()=>decorate(force),ms)}
   const observer=new MutationObserver(()=>schedule(false,100));observer.observe(document.documentElement,{subtree:true,childList:true});
   document.addEventListener('click',e=>{if(e.target.closest('#nav button,[data-tab],[data-aw-tab],#apApply,#v4Apply,#opCheckApply'))schedule(true,260)},true);
-  const channel=sb.channel(`onepoint-adjusted-clockout-${path.replace('/','')}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'time_entries'},()=>schedule(true,180)).subscribe();
+  sb.channel(`onepoint-adjusted-clockout-${path.replace('/','')}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'time_entries'},()=>schedule(true,180)).subscribe();
   setTimeout(()=>decorate(true),900);
 })();
