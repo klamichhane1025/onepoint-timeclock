@@ -6,6 +6,13 @@
 - Platform Admin is the only cross-tenant role.
 - Supabase RLS will enforce organization isolation; UI filtering alone is not sufficient.
 
+## Portal sessions and POS security
+- On normal Owner/Manager workstations, OnePoint persists the authenticated session and relies on Supabase refresh-token rotation so the user is not repeatedly signed out merely because the tab or browser was closed.
+- This is session continuity, not an immortal access token. Explicit logout, credential/security changes, token revocation, browser-data clearing, or other security events may still end the session.
+- Platform Admin remains browser-session scoped on ordinary devices unless another explicit security policy is adopted.
+- A browser registered as a OnePoint POS/cashier device keeps its trusted Time Clock device credential, but it must not persist Owner, Manager, or Platform Admin portal authentication.
+- A fresh navigation from a registered POS device into Owner, Manager, or Admin requires a fresh human login. Reloading an already-open authenticated portal page does not intentionally interrupt the user mid-task.
+
 ## Employee identity
 - Employee identity is scoped to the organization, never globally.
 - Employee ID must be unique within one organization.
@@ -25,6 +32,7 @@ Database constraints / guards:
 
 ## PIN and password entry
 - Password and PIN fields provide a visibility control so the user can temporarily reveal the entered secret.
+- Only one visibility/reveal control should be shown per password or PIN field; duplicate eye icons must be suppressed.
 - When an Owner or Platform Admin creates a new employee PIN, the PIN must be entered twice before the employee can be saved.
 - When an employee PIN is changed, both new-PIN fields must either be blank to keep the current PIN or contain the same valid 4–8 digit PIN.
 - PIN confirmation shows a live green `Match` state when both entries match and a red mismatch state when they do not.
@@ -38,11 +46,15 @@ Database constraints / guards:
 - Owner and Manager Overview show one live `Clocked In Now` metric containing only the number of employees currently clocked in.
 - The live metric updates when employees clock in or out; it does not add a detailed live-attendance panel to Timesheets & Payroll.
 - Platform Admin Owner View does not receive this Owner/Manager live-count card.
-- If an employee remains clocked in at that store's captured scheduled closing time, OnePoint waits 60 minutes before treating the shift as a missed clock-out.
-- During the 60-minute grace period, an employee may still physically clock out. If that punch occurs after the captured store closing time, OnePoint preserves the physical `actual_clock_out` for audit/history but uses the captured store closing time as the effective/payable clock-out.
-- A grace-period clock-out adjusted to store closing is shown in Owner, Manager, and Admin timesheets with an asterisk (`*`) next to the displayed Clock Out time.
+- Each employee punch is independent, so multiple employees may be clocked in at the same store at the same time.
+- The employee's physical clock-in punch is the effective/payable clock-in time. Scheduled store opening is retained as schedule metadata and must not replace a real employee clock-in punch.
+- If an employee physically clocks out on or before that shift's captured scheduled store closing time, the employee's physical clock-out is the effective/payable clock-out time.
+- If an employee physically clocks out after the captured scheduled store closing time, OnePoint preserves the physical `actual_clock_out` for audit/history but caps the effective/payable clock-out at the captured store closing time.
+- A clock-out adjusted to store closing is shown in Owner, Manager, and Admin timesheets with an asterisk (`*`) next to the displayed Clock Out time.
 - The asterisk means the displayed Clock Out is the store-closing adjustment; the employee's later physical punch remains preserved in the audit record.
-- If the shift is still open after the 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
+- If an employee remains clocked in at that store's captured scheduled closing time, OnePoint waits the full 60 minutes before treating the shift as a missed clock-out.
+- During that 60-minute grace period the employee remains clocked in and may still physically clock out; the same store-close cap above applies if that punch is late.
+- If the shift is still open after the full 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
 - Automatic missed-clock-out finalization does not fabricate a physical punch: `actual_clock_out` remains distinguishable from the system-applied payable closing time.
 
 ## Location ordering
@@ -54,8 +66,8 @@ Database constraints / guards:
 ## Payroll
 - Employee pay rate is optional.
 - Job code is optional.
-- DFW Logic caps payable punches to configured store operating hours.
-- Basic Logic uses actual punch times except for the store-closing grace-period rule above, where a post-close employee punch is effectively capped to the captured store closing time.
+- Scheduled opening and closing times are captured on the shift for schedule comparison and closing-time enforcement, but a real employee clock-in punch remains the payable start time.
+- For both DFW and Basic payroll presentation, a real clock-out on or before captured store close uses the real punch time; a real clock-out after captured store close is capped to captured store close for payable hours while retaining the actual punch for audit.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
 - Managers see payroll only for authorized stores.
 - Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.
