@@ -7,7 +7,7 @@
   const sb=window.onePointSupabase||window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
   const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
   const style=document.createElement('style');
-  style.textContent=`.opSortableStore{position:relative}.opStoreDragHandle{width:28px;height:28px;min-width:28px;border-radius:8px;display:grid;place-items:center;color:var(--pup-tertiary,#86868b);font-size:17px;line-height:1;user-select:none;cursor:grab;background:rgba(118,118,128,.06);touch-action:none}.opStoreDragHandle:active{cursor:grabbing}.opSortableStore.opDragging{opacity:.48}.opStoreDragHandle:hover{background:rgba(118,118,128,.12);color:var(--pup-text,#1d1d1f)}.opPeriodTile .opStoreDragHandle,.apTile .opStoreDragHandle{position:absolute;right:10px;top:10px;z-index:4}.opOrderHint{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--pup-secondary,#6e6e73);font-size:11px}.opOrderSaved{color:#16803d;font-weight:700;opacity:0;transition:opacity .2s}.opOrderSaved.show{opacity:1}.opSortDropBefore{box-shadow:inset 0 3px 0 var(--pup-blue,#0071e3)!important}`;
+  style.textContent=`.opSortableStore{position:relative}.opStoreDragHandle{width:28px;height:28px;min-width:28px;border-radius:8px;display:grid;place-items:center;color:var(--pup-tertiary,#86868b);font-size:17px;line-height:1;user-select:none;cursor:grab;background:rgba(118,118,128,.06);touch-action:none}.opStoreDragHandle:active{cursor:grabbing}.opSortableStore.opDragging{opacity:.48}.opStoreDragHandle:hover,.opStoreDragHandle:focus-visible{background:rgba(118,118,128,.12);color:var(--pup-text,#1d1d1f);outline:2px solid rgba(0,113,227,.24);outline-offset:2px}.opPeriodTile .opStoreDragHandle,.apTile .opStoreDragHandle{position:absolute;right:10px;top:10px;z-index:4}.list>.row.opSortableStore>.opStoreDragHandle{align-self:center;flex:0 0 28px;margin-right:3px}.opOrderHint{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--pup-secondary,#6e6e73);font-size:11px}.opOrderSaved{color:#16803d;font-weight:700;opacity:0;transition:opacity .2s}.opOrderSaved.show{opacity:1}.opSortDropBefore{box-shadow:inset 0 3px 0 var(--pup-blue,#0071e3)!important}`;
   document.head.appendChild(style);
 
   let applying=false,dragId='',persistTimer=null,applyTimer=null;
@@ -46,10 +46,22 @@
   }
   function locationRows(stores){
     const rows=$$('#content>.card .list>.row');if(!rows.length)return[];
-    if(rows.length===stores.length){rows.forEach((r,i)=>{if(!r.dataset.opStoreId)r.dataset.opStoreId=stores[i].id});return rows}
-    const unused=new Set(stores.map(s=>s.id));
-    rows.forEach(r=>{if(r.dataset.opStoreId){unused.delete(r.dataset.opStoreId);return}const code=(r.querySelector('.muted')?.textContent||'').split('·')[0].trim(),matches=stores.filter(s=>unused.has(s.id)&&String(s.store_code||'').trim()===code);if(matches.length===1){r.dataset.opStoreId=matches[0].id;unused.delete(matches[0].id)}});
-    return rows.filter(r=>r.dataset.opStoreId)
+    const storeIds=new Set(stores.map(s=>s.id)),unused=new Set(storeIds);
+    for(const r of rows){
+      let id=r.dataset.opStoreId||'';
+      if(!id){
+        const action=r.querySelector('.opLocHours[data-id],.opLocEdit[data-id],.opLocDelete[data-id],[data-ap-store]');
+        id=action?.dataset?.id||action?.dataset?.apStore||'';
+      }
+      if(id&&storeIds.has(id)){r.dataset.opStoreId=id;unused.delete(id)}
+    }
+    for(const r of rows){
+      if(r.dataset.opStoreId)continue;
+      const code=(r.querySelector('.muted')?.textContent||'').split('·')[0].trim();
+      const matches=stores.filter(s=>unused.has(s.id)&&String(s.store_code||'').trim()===code);
+      if(matches.length===1){r.dataset.opStoreId=matches[0].id;unused.delete(matches[0].id)}
+    }
+    return rows.filter(r=>r.dataset.opStoreId&&storeIds.has(r.dataset.opStoreId))
   }
   function overviewItems(){return path==='/owner'?$$('.opPeriodGrid>.opPeriodTile[data-store]').map(x=>(x.dataset.opStoreId=x.dataset.store,x)):$$('.apGrid>.apTile[data-ap-store]').map(x=>(x.dataset.opStoreId=x.dataset.apStore,x))}
   function addHint(mode){
@@ -57,11 +69,11 @@
     if(mode==='overview'){const grid=path==='/owner'?$('.opPeriodGrid'):$('.apGrid');h=grid?.closest('.card')?.querySelector('.head>div')||null}
     else h=$('#content>.card .head>div');
     if(!h||h.querySelector('.opOrderHint'))return;
-    const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag the handle to reorder locations. ${mode==='overview'?'The same order is used on Locations.':'The same order is used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)
+    const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag the handle to reorder locations. ${mode==='overview'?'The same order is used on Locations.':'Your saved order is also used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)
   }
   function addHandle(item){
     let h=item.querySelector(':scope>.opStoreDragHandle');if(h)return h;
-    h=document.createElement('span');h.className='opStoreDragHandle';h.textContent='⋮⋮';h.title='Drag to reorder';h.setAttribute('aria-label','Drag location to reorder');h.setAttribute('role','button');h.tabIndex=0;h.draggable=true;item.insertAdjacentElement('afterbegin',h);return h
+    h=document.createElement('span');h.className='opStoreDragHandle';h.textContent='⋮⋮';h.title='Drag to reorder location';h.setAttribute('aria-label','Drag location to reorder');h.setAttribute('role','button');h.tabIndex=0;h.draggable=true;item.insertAdjacentElement('afterbegin',h);return h
   }
   function sortItems(items,stores,order){
     const fallback=new Map(stores.map((s,i)=>[s.id,i]));
