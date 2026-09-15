@@ -39,7 +39,9 @@ Database constraints / guards:
 - The live metric updates when employees clock in or out; it does not add a detailed live-attendance panel to Timesheets & Payroll.
 - Platform Admin Owner View does not receive this Owner/Manager live-count card.
 - If an employee remains clocked in at that store's captured scheduled closing time, OnePoint waits 60 minutes before treating the shift as a missed clock-out.
-- During the 60-minute grace period, the employee may still clock out normally; that employee punch remains the actual clock-out record.
+- During the 60-minute grace period, an employee may still physically clock out. If that punch occurs after the captured store closing time, OnePoint preserves the physical `actual_clock_out` for audit/history but uses the captured store closing time as the effective/payable clock-out.
+- A grace-period clock-out adjusted to store closing is shown in Owner, Manager, and Admin timesheets with an asterisk (`*`) next to the displayed Clock Out time.
+- The asterisk means the displayed Clock Out is the store-closing adjustment; the employee's later physical punch remains preserved in the audit record.
 - If the shift is still open after the 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
 - Automatic missed-clock-out finalization does not fabricate a physical punch: `actual_clock_out` remains distinguishable from the system-applied payable closing time.
 
@@ -53,7 +55,7 @@ Database constraints / guards:
 - Employee pay rate is optional.
 - Job code is optional.
 - DFW Logic caps payable punches to configured store operating hours.
-- Basic Logic uses actual punch times.
+- Basic Logic uses actual punch times except for the store-closing grace-period rule above, where a post-close employee punch is effectively capped to the captured store closing time.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
 - Managers see payroll only for authorized stores.
 - Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.
