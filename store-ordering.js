@@ -9,7 +9,7 @@
   const style=document.createElement('style');
   style.textContent=`.opSortableStore{position:relative}.opSortableStore[draggable="true"]{cursor:grab}.opSortableStore.opDragging{opacity:.48;cursor:grabbing}.opStoreDragHandle{width:28px;height:28px;min-width:28px;border-radius:8px;display:grid;place-items:center;color:var(--pup-tertiary,#86868b);font-size:17px;line-height:1;user-select:none;cursor:grab;background:rgba(118,118,128,.06)}.opStoreDragHandle:hover{background:rgba(118,118,128,.12);color:var(--pup-text,#1d1d1f)}.opPeriodTile .opStoreDragHandle,.apTile .opStoreDragHandle{position:absolute;right:10px;top:10px;z-index:4}.opOrderHint{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--pup-secondary,#6e6e73);font-size:11px}.opOrderSaved{color:#16803d;font-weight:700;opacity:0;transition:opacity .2s}.opOrderSaved.show{opacity:1}.opSortDropBefore{box-shadow:inset 0 3px 0 var(--pup-blue,#0071e3)!important}`;
   document.head.appendChild(style);
-  let applying=false,dragId='',saveTimer=null,lastOrg='',cachedStores=[],cachedAt=0;
+  let applying=false,dragId='',persistTimer=null,applyTimer=null,lastOrg='',cachedStores=[],cachedAt=0;
   async function session(){const{data:{session}}=await sb.auth.getSession();return session}
   async function orgId(){
     if(path==='/admin')return sessionStorage.getItem('onepoint_admin_selected_org')||'';
@@ -38,7 +38,14 @@
   function overviewItems(){return path==='/owner'?$$('.opPeriodGrid>.opPeriodTile[data-store]').map(x=>(x.dataset.opStoreId=x.dataset.store,x)):$$('.apGrid>.apTile[data-ap-store]').map(x=>(x.dataset.opStoreId=x.dataset.apStore,x))}
   function addHint(mode){const h=$('#content .head>div');if(!h||h.querySelector('.opOrderHint'))return;const d=document.createElement('div');d.className='opOrderHint';d.innerHTML=`<span>⋮⋮ Drag locations to reorder. ${mode==='overview'?'The same order is used on Locations.':'The same order is used on Overview.'}</span><span class="opOrderSaved">Order saved</span>`;h.appendChild(d)}
   function addHandle(item){if(item.querySelector(':scope>.opStoreDragHandle'))return;const h=document.createElement('span');h.className='opStoreDragHandle';h.textContent='⋮⋮';h.title='Drag to reorder';h.setAttribute('aria-label','Drag location to reorder');item.insertAdjacentElement('afterbegin',h)}
-  function sortItems(items,stores,order){const fallback=new Map(stores.map((s,i)=>[s.id,i]));items.sort((a,b)=>{const ai=order.has(a.dataset.opStoreId)?order.get(a.dataset.opStoreId):100000+(fallback.get(a.dataset.opStoreId)??9999),bi=order.has(b.dataset.opStoreId)?order.get(b.dataset.opStoreId):100000+(fallback.get(b.dataset.opStoreId)??9999);return ai-bi});const p=items[0]?.parentElement;if(p)items.forEach(x=>p.appendChild(x))}
+  function sortItems(items,stores,order){
+    const fallback=new Map(stores.map((s,i)=>[s.id,i]));
+    items.sort((a,b)=>{const ai=order.has(a.dataset.opStoreId)?order.get(a.dataset.opStoreId):100000+(fallback.get(a.dataset.opStoreId)??9999),bi=order.has(b.dataset.opStoreId)?order.get(b.dataset.opStoreId):100000+(fallback.get(b.dataset.opStoreId)??9999);return ai-bi});
+    const p=items[0]?.parentElement;if(!p)return;
+    const current=[...p.children].filter(x=>items.includes(x));
+    const already=current.length===items.length&&current.every((x,i)=>x===items[i]);
+    if(!already)items.forEach(x=>p.appendChild(x));
+  }
   async function persist(parent,id){
     const s=await session();if(!s)return;const items=[...parent.querySelectorAll(':scope>.opSortableStore[data-op-store-id]')],rows=items.map((x,i)=>({organization_id:id,store_id:x.dataset.opStoreId,position:i,updated_by:s.user.id,updated_at:new Date().toISOString()}));if(!rows.length)return;
     const{error}=await sb.from('organization_store_order').upsert(rows,{onConflict:'organization_id,store_id'});if(error){window.onePointMessage?.(error.message||'Unable to save location order.','Location Order','error');return}
@@ -51,12 +58,12 @@
       item.addEventListener('dragend',()=>{item.classList.remove('opDragging');$$('.opSortDropBefore').forEach(x=>x.classList.remove('opSortDropBefore'));dragId=''})
     });
     const parent=items[0]?.parentElement;if(!parent||parent.dataset.opDropBound==='1')return;parent.dataset.opDropBound='1';
-    parent.addEventListener('dragover',e=>{if(!dragId)return;e.preventDefault();const target=e.target.closest('.opSortableStore');if(!target||target.parentElement!==parent||target.dataset.opStoreId===dragId)return;const dragging=parent.querySelector(`.opSortableStore[data-op-store-id="${CSS.escape(dragId)}"]`);if(!dragging)return;const r=target.getBoundingClientRect(),before=e.clientY<r.top+r.height/2||(Math.abs(e.clientY-(r.top+r.height/2))<r.height*.25&&e.clientX<r.left+r.width/2);target.classList.toggle('opSortDropBefore',before);if(before)parent.insertBefore(dragging,target);else parent.insertBefore(dragging,target.nextSibling)});
-    parent.addEventListener('drop',e=>{if(!dragId)return;e.preventDefault();$$('.opSortDropBefore').forEach(x=>x.classList.remove('opSortDropBefore'));clearTimeout(saveTimer);saveTimer=setTimeout(()=>persist(parent,id),80)})
+    parent.addEventListener('dragover',e=>{if(!dragId)return;e.preventDefault();const target=e.target.closest('.opSortableStore');if(!target||target.parentElement!==parent||target.dataset.opStoreId===dragId)return;const dragging=parent.querySelector(`.opSortableStore[data-op-store-id="${CSS.escape(dragId)}"]`);if(!dragging)return;const r=target.getBoundingClientRect(),before=e.clientY<r.top+r.height/2||(Math.abs(e.clientY-(r.top+r.height/2))<r.height*.25&&e.clientX<r.left+r.width/2);$$('.opSortDropBefore').forEach(x=>x!==target&&x.classList.remove('opSortDropBefore'));target.classList.toggle('opSortDropBefore',before);if(before)parent.insertBefore(dragging,target);else parent.insertBefore(dragging,target.nextSibling)});
+    parent.addEventListener('drop',e=>{if(!dragId)return;e.preventDefault();$$('.opSortDropBefore').forEach(x=>x.classList.remove('opSortDropBefore'));clearTimeout(persistTimer);persistTimer=setTimeout(()=>persist(parent,id),80)})
   }
   async function apply(){if(applying)return;const mode=activeMode();if(!mode)return;const id=await orgId();if(!id)return;applying=true;try{const[stores,order]=await Promise.all([storesFor(id),orderFor(id)]);const items=mode==='overview'?overviewItems():locationRows(stores);if(!items.length)return;sortItems(items,stores,order);bind(items,id);addHint(mode)}catch(e){console.warn('Store ordering:',e?.message||e)}finally{applying=false}}
-  const observer=new MutationObserver(()=>{clearTimeout(saveTimer);setTimeout(apply,60)});observer.observe(document.documentElement,{subtree:true,childList:true});
-  document.addEventListener('click',e=>{if(e.target.closest('#nav button,.awOpen'))setTimeout(apply,300)},true);
+  const observer=new MutationObserver(()=>{clearTimeout(applyTimer);applyTimer=setTimeout(apply,100)});observer.observe(document.documentElement,{subtree:true,childList:true});
+  document.addEventListener('click',e=>{if(e.target.closest('#nav button,.awOpen')){clearTimeout(applyTimer);applyTimer=setTimeout(apply,300)}},true);
   setTimeout(apply,1000);
   window.onePointStoreOrdering={refresh:apply};
 })();
