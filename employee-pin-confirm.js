@@ -36,7 +36,8 @@
   function validateForSave(target){
     const id=target?.id;if(!['oeSave','aweSave'].includes(id))return true;
     const pin=document.querySelector(id==='oeSave'?'#oePin':'#awePin');if(!pin)return true;
-    const c=config(pin),confirm=document.getElementById(c.confirmId),statusEl=confirm?.parentElement?.querySelector('.opPinConfirmStatus');if(!confirm||!statusEl)return false;
+    const c=config(pin),confirm=document.getElementById(c.confirmId),statusEl=confirm?.closest('.field')?.querySelector('.opPinConfirmStatus');
+    if(!confirm||!statusEl){window.onePointMessage?.('Re-open the employee form and enter the PIN twice.','Employee PIN','error');return false}
     const ok=status(pin,confirm,statusEl);
     if(ok)return true;
     const a=pin.value.trim();if(c.optional&&!a&&!confirm.value.trim())return true;
