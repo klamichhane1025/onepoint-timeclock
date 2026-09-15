@@ -35,9 +35,9 @@ Database constraints / guards:
 - Removing a clock record from active timesheets is a soft delete/void only.
 - Deleted records remain in History & Audit and can be restored.
 - Manual edits retain original values and audit metadata.
-- A successful employee clock-in must appear in the Owner portal and Platform Admin Owner View without requiring a manual page refresh.
-- Active/open shifts are shown as `Clocked In` with a running elapsed/payable duration. DFW Logic continues to cap payable running time at the captured scheduled close.
-- Clock-in/out changes use Supabase Realtime to refresh Overview and Timesheets & Payroll while those views are open.
+- Owner and Manager Overview show one live `Clocked In Now` metric containing only the number of employees currently clocked in.
+- The live metric updates when employees clock in or out; it does not add a detailed live-attendance panel to Timesheets & Payroll.
+- Platform Admin Owner View does not receive this Owner/Manager live-count card.
 
 ## Location ordering
 - Each Owner can drag and drop accessible locations into a preferred display order.
@@ -52,3 +52,4 @@ Database constraints / guards:
 - Basic Logic uses actual punch times.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
 - Managers see payroll only for authorized stores.
+- Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.
