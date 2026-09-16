@@ -15,7 +15,7 @@
     statusEl.className='opPinConfirmStatus';
     if(!a&&!b&&optional){statusEl.textContent='Leave both blank to keep the current PIN.';statusEl.classList.add('wait');return true}
     if(!a&&!b){statusEl.textContent='';return false}
-    if(!/^[A-Za-z0-9]{4,8}$/.test(a)){statusEl.textContent='PIN must be 4–8 letters or numbers.';statusEl.classList.add('mismatch');return false}
+    if(!/^[A-Za-z0-9]{4,8}$/.test(a)){statusEl.textContent='PIN must be 4–8 letters, numbers, or a mix.';statusEl.classList.add('mismatch');return false}
     if(!b){statusEl.textContent='Re-enter the PIN to confirm.';statusEl.classList.add('wait');return false}
     if(a===b){statusEl.textContent='✓ Match';statusEl.classList.add('match');return true}
     statusEl.textContent='✕ Not matched';statusEl.classList.add('mismatch');return false
@@ -25,7 +25,7 @@
     pin.dataset.pinConfirmEnhanced='1';
     pin.setAttribute('inputmode','text');pin.setAttribute('maxlength','8');pin.setAttribute('autocapitalize','none');pin.setAttribute('autocorrect','off');pin.setAttribute('spellcheck','false');
     const c=config(pin);if(!c.field)return;
-    const label=c.field.querySelector('label');if(label)label.textContent=label.textContent.replace('4–8 digits','4–8 letters or numbers');
+    const label=c.field.querySelector('label');if(label)label.textContent=label.textContent.replace('4–8 digits','4–8 letters, numbers, or a mix').replace('4–8 letters or numbers','4–8 letters, numbers, or a mix');
     const confirmField=document.createElement('div');confirmField.className='field opPinConfirmField';
     const required=c.optional?'':' *';
     confirmField.innerHTML=`<label for="${c.confirmId}">${c.optional?'Confirm New PIN':'Confirm PIN'}${required}</label><input id="${c.confirmId}" type="password" inputmode="text" maxlength="8" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" data-pin-field><div class="opPinConfirmStatus" role="status" aria-live="polite"></div>`;
