@@ -5,7 +5,7 @@ const role=path==='/owner'?'owner':'manager';
 const URL='https://eomgnaulupqiwjzcimqt.supabase.co',KEY='sb_publishable_p20lJcecq2HN7trRTDMW8Q_iCYVnQsM';
 const sb=window.onePointSupabase||window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-let menu=null,observer=null,identity=null,notificationView=false;
+let menu=null,observer=null,identity=null,notificationView=false,openToken=0;
 const notifications=[];
 
 function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
@@ -37,17 +37,16 @@ function notificationRows(){
 async function menuHtml(){
  const i=await resolveIdentity(),count=notifications.length;
  if(notificationView)return`<div class="opProfileMenuHead"><button class="opProfileBack" type="button" aria-label="Back to profile menu">‹</button><div><b>Notifications</b><small>${count?`${count} new`:'No new notifications'}</small></div>${count?'<button class="opProfileClear" type="button">Clear</button>':''}</div><div class="opNotificationsList">${notificationRows()}</div>`;
- return`<div class="opProfileIdentity"><span class="opProfileAvatar">${esc(initials(i?.name))}</span><span><b>${esc(i?.name||'Account')}</b><small>${esc(i?.email||'')}</small></span></div><div class="opProfileMenuGroup"><button type="button" class="opProfileMenuItem" data-action="account"><span>My Account</span><span aria-hidden="true">›</span></button><button type="button" class="opProfileMenuItem" data-action="notifications"><span>Notifications</span><span class="opProfileCount ${count?'show':''}">${count||''}</span></button></div><button type="button" class="opProfileMenuItem dangerText" data-action="signout">Sign Out</button>`
+ return`<div class="opProfileIdentity"><span class="opProfileAvatar">${esc(initials(i?.name))}</span><span><b>${esc(i?.name||'Account')}</b><small>${esc(i?.email||'')}</small></span></div><div class="opProfileMenuGroup"><button type="button" role="menuitem" class="opProfileMenuItem" data-action="account"><span>My Account</span><span aria-hidden="true">›</span></button><button type="button" role="menuitem" class="opProfileMenuItem" data-action="notifications"><span>Notifications</span><span class="opProfileCount ${count?'show':''}">${count||''}</span></button></div><button type="button" role="menuitem" class="opProfileMenuItem dangerText" data-action="signout">Sign Out</button>`
 }
-function position(){if(!menu)return;const who=$('#who');if(!who)return;const r=who.getBoundingClientRect(),gap=8,w=Math.min(310,innerWidth-24);let left=Math.max(12,Math.min(innerWidth-w-12,r.right-w));let top=Math.min(innerHeight-menu.offsetHeight-12,r.bottom+gap);top=Math.max(12,top);menu.style.width=`${w}px`;menu.style.left=`${left}px`;menu.style.top=`${top}px`}
+function position(){if(!menu)return;const who=$('#who');if(!who)return;const r=who.getBoundingClientRect(),gap=8,w=Math.min(310,innerWidth-24);const left=Math.max(12,Math.min(innerWidth-w-12,r.right-w));let top=Math.min(innerHeight-menu.offsetHeight-12,r.bottom+gap);top=Math.max(12,top);menu.style.width=`${w}px`;menu.style.left=`${left}px`;menu.style.top=`${top}px`}
 async function open(){
- if(menu)return;notificationView=false;
- menu=document.createElement('div');menu.id='opProfileMenu';menu.className='opProfileMenu';menu.setAttribute('role','menu');menu.innerHTML=await menuHtml();document.body.appendChild(menu);position();
- $('#who')?.setAttribute('aria-expanded','true');bindMenu();requestAnimationFrame(()=>menu?.classList.add('show'))
+ if(menu)return;notificationView=false;const token=++openToken,el=document.createElement('div');el.id='opProfileMenu';el.className='opProfileMenu';el.setAttribute('role','menu');const html=await menuHtml();if(token!==openToken||menu)return;el.innerHTML=html;menu=el;document.body.appendChild(el);position();
+ $('#who')?.setAttribute('aria-expanded','true');bindMenu();requestAnimationFrame(()=>{if(menu===el)el.classList.add('show')})
 }
-function close(){if(!menu)return;const old=menu;menu=null;$('#who')?.setAttribute('aria-expanded','false');old.classList.remove('show');setTimeout(()=>old.remove(),120)}
+function close(){openToken++;if(!menu){$('#who')?.setAttribute('aria-expanded','false');return}const old=menu;menu=null;$('#who')?.setAttribute('aria-expanded','false');old.classList.remove('show');setTimeout(()=>old.remove(),120)}
 function toggle(){menu?close():open()}
-async function redraw(){if(!menu)return;menu.innerHTML=await menuHtml();position();bindMenu()}
+async function redraw(){const current=menu;if(!current)return;const html=await menuHtml();if(menu!==current)return;current.innerHTML=html;position();bindMenu()}
 function openAccount(){close();window.dispatchEvent(new CustomEvent('onepoint:open-account',{detail:{role}}))}
 async function signOut(){close();await sb.auth.signOut();location.href=role==='manager'?'/manager/':'/owner/'}
 function bindMenu(){
