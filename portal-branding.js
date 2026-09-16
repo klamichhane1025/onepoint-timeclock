@@ -6,13 +6,20 @@ const isClock=path==='/timeclock'||cashierClock;
 if(!['/owner','/manager','/timeclock'].includes(path)&&!cashierClock)return;
 const sb=window.onePointSupabase||window.supabase?.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const publicLogo=p=>p?`${URL}/storage/v1/object/public/organization-branding/${p}?v=${Date.now()}`:null;
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 let current={logo_url:null,name:null};
-function sidebar(){const b=document.querySelector('.side .brand');if(!b)return;const img=current.logo_url?`<img class="opBrandLogo" src="${current.logo_url}" alt="${(current.name||'Business').replaceAll('"','&quot;')} logo">`:'';b.classList.add('opBusinessBrand');b.innerHTML=`${img}<div class="opOnePointLabel">OnePoint<small>Time & Attendance</small></div>`}
+function sidebar(){
+ const b=document.querySelector('.side .brand');if(!b)return;
+ const business=current.name||'OnePoint Business';
+ const img=current.logo_url?`<img class="opBrandLogo" src="${esc(current.logo_url)}" alt="${esc(business)} logo">`:'';
+ b.classList.add('opBusinessBrand');
+ b.innerHTML=`${img}<div class="opSidebarBusinessName">${esc(business)}</div><div class="opSidebarBrandGap" aria-hidden="true"></div><div class="opOnePointLabel">OnePoint<small>Time & Attendance</small></div>`
+}
 function clock(){
  document.body.classList.add('opClockNoSide');
  document.querySelectorAll('.opClockBrandHeader').forEach(x=>x.remove());
  const c=document.querySelector('.clock'),mount=c?.querySelector('.kLogoMount');if(!mount)return;
- const visual=current.logo_url?`<img class="opBrandLogo" src="${current.logo_url}" alt="${(current.name||'Business').replaceAll('"','&quot;')} logo">`:`<div class="kLogoFallback" aria-label="OnePoint">1</div>`;
+ const visual=current.logo_url?`<img class="opBrandLogo" src="${esc(current.logo_url)}" alt="${esc(current.name||'Business')} logo">`:`<div class="kLogoFallback" aria-label="OnePoint">1</div>`;
  mount.innerHTML=visual
 }
 function apply(data){current={...current,...data};if(isClock)clock();else sidebar()}
