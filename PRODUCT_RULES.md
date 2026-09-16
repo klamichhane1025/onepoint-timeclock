@@ -92,6 +92,16 @@ Database constraints / guards:
 - Status presentation is consistent across the OnePoint application: `Active` uses a solid green badge with high-contrast text; `Inactive` and `Expired` use a solid red badge with high-contrast text.
 - Status color is a presentation aid only and never changes the underlying authorization, invitation, or organization state.
 
+## Profile menu and compact interface
+- In Owner and Manager portals, the top-right user profile/name is the single entry point for personal account controls.
+- The profile popover contains `My Account`, `Notifications`, and `Sign Out`; Account and Logout are not duplicated in the left navigation or as separate top-bar buttons.
+- `My Account` displays the signed-in user's business, role, email, and applicable plan details together with password/security controls.
+- Owner `My Account` also contains Business Branding and Portal Theme controls. Managers can view their account/security controls but do not gain Owner-only branding authority.
+- Notifications are presented inside the profile popover rather than as a separate permanent navigation item. The notification surface must support an empty `all caught up` state and future OnePoint notification producers without requiring another top-level control.
+- Owner, Manager, and Platform Admin portals use the repository Apple-design refinement layer for compact buttons, cards, rows, tiles, tables, filters, and modal spacing.
+- Compact portal styling must reduce unused visual space without removing meaningful hierarchy, status indicators, focus states, or accessibility behavior.
+- The Employee Time Clock / POS interface is excluded from the compact desktop treatment so its punch controls retain larger practical touch targets.
+
 ## Payroll
 - Employee pay rate is optional.
 - Job code is optional.
