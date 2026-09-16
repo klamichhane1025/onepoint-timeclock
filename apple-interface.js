@@ -1,12 +1,14 @@
 (()=>{
 if(window.__onePointAppleInterface)return;window.__onePointAppleInterface=true;
 const content=document.querySelector('#content');if(!content)return;
+const path=location.pathname.replace(/\/+$/,'')||'/';
+const identityPortal=path==='/owner'||path==='/manager';
 const unwanted=[
  'Owned and shared locations are listed together. Purple/Shared labels identify partner locations.',
  'POS browsers registered for employee clock access. Machine ID is a OnePoint-generated device identifier; web browsers do not expose the physical MAC address.'
 ];
 const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
-let observer=null,running=false,raf=0;
+let observer=null,identityObserver=null,running=false,identityRunning=false,raf=0,identityTimer=0,cachedIdentity=null;
 function clean(){
  if(running)return;running=true;observer?.disconnect();
  try{
@@ -33,8 +35,46 @@ function clean(){
  }
 }
 function schedule(){cancelAnimationFrame(raf);raf=requestAnimationFrame(clean)}
+function initials(name){return String(name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'U'}
+async function resolveIdentity(){
+ if(cachedIdentity)return cachedIdentity;
+ const sb=window.onePointSupabase;if(!sb)return null;
+ try{
+  const{data:{session}}=await sb.auth.getSession();if(!session?.user)return null;
+  const{data,error}=await sb.from('organization_users').select('display_name,email,role').eq('user_id',session.user.id).eq('active',true).in('role',['owner','manager']).limit(1);
+  if(error)throw error;
+  const member=data?.[0]||null;
+  const meta=session.user.user_metadata||{};
+  const displayName=String(member?.display_name||meta.full_name||meta.name||'').trim();
+  cachedIdentity={name:displayName||String(session.user.email||member?.email||'').split('@')[0]||'Account',email:session.user.email||member?.email||''};
+  return cachedIdentity;
+ }catch(e){console.warn('Customer identity:',e?.message||e);return null}
+}
+async function personalizeIdentity(){
+ if(!identityPortal||identityRunning)return;
+ const who=document.querySelector('#who');if(!who||!who.children.length)return;
+ identityRunning=true;identityObserver?.disconnect();
+ try{
+  const identity=await resolveIdentity();if(!identity)return;
+  const avatar=who.querySelector('.avatar');
+  const info=[...who.children].find(el=>el!==avatar&&!el.matches('button'));
+  if(!info)return;
+  let name=info.querySelector('b,.opCustomerIdentityName');
+  if(!name){name=document.createElement('b');info.prepend(name)}
+  name.textContent=identity.name;name.classList.add('opCustomerIdentityName');
+  if(identity.email)name.title=identity.email;
+  [...info.querySelectorAll('.muted')].forEach(el=>el.remove());
+  who.classList.add('opCustomerWho');info.classList.add('opCustomerIdentity');
+  if(avatar){avatar.textContent=initials(identity.name);avatar.setAttribute('aria-hidden','true')}
+ }finally{
+  identityRunning=false;
+  identityObserver?.observe(who,{childList:true,subtree:true,characterData:true});
+ }
+}
+function scheduleIdentity(){clearTimeout(identityTimer);identityTimer=setTimeout(personalizeIdentity,40)}
 observer=new MutationObserver(schedule);observer.observe(content,{childList:true,subtree:true,characterData:true});
-document.addEventListener('click',e=>{if(e.target.closest('#nav button,[data-tab],[data-aw-tab]'))setTimeout(schedule,80)},true);
-setTimeout(clean,50);setTimeout(clean,500);
-window.onePointAppleInterface={refresh:schedule};
+if(identityPortal){const who=document.querySelector('#who');if(who){identityObserver=new MutationObserver(scheduleIdentity);identityObserver.observe(who,{childList:true,subtree:true,characterData:true})}}
+document.addEventListener('click',e=>{if(e.target.closest('#nav button,[data-tab],[data-aw-tab]')){setTimeout(schedule,80);setTimeout(scheduleIdentity,80)}},true);
+setTimeout(clean,50);setTimeout(clean,500);setTimeout(personalizeIdentity,120);setTimeout(personalizeIdentity,700);
+window.onePointAppleInterface={refresh:()=>{schedule();scheduleIdentity()}};
 })();
