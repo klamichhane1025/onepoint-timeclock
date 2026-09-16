@@ -1,0 +1,14 @@
+:root{--op-apple-ease:cubic-bezier(.2,.8,.2,1)}
+.top{background:rgba(255,255,255,.82);-webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px)}
+.top h1{letter-spacing:-.03em;line-height:1.12}
+.content h2{letter-spacing:-.022em;line-height:1.2}
+.content h3{letter-spacing:-.015em;line-height:1.25}
+.btn,.nav button,.storeTile,.row{transition:background-color .14s var(--op-apple-ease),border-color .14s var(--op-apple-ease),box-shadow .14s var(--op-apple-ease),transform .1s var(--op-apple-ease)}
+.btn:active,.nav button:active{transform:scale(.985)}
+.opHeaderActionsOnly{justify-content:flex-end!important;margin-bottom:16px!important}
+.opHeaderActionsOnly>.actions{margin-left:auto}
+.opApplePrimaryCard>.head:empty{display:none}
+.opApplePrimaryCard>.head>.opAppleEmptyLead{display:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.btn:active,.nav button:active{transform:none!important}}
+@media(prefers-reduced-transparency:reduce){.top{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.opLivePanel{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+@media(prefers-contrast:more){.top,.card,.table,.row,.storeTile{border-color:#8e8e93!important}.btn.secondary{border-color:#6e6e73!important}}
