@@ -9,6 +9,11 @@
 .opHeaderActionsOnly>.actions{margin-left:auto}
 .opApplePrimaryCard>.head:empty{display:none}
 .opApplePrimaryCard>.head>.opAppleEmptyLead{display:none}
+.who.opCustomerWho{gap:11px}
+.opCustomerWho .avatar{width:38px;height:38px;font-size:12px;font-weight:760;letter-spacing:-.01em}
+.opCustomerIdentity{display:flex;align-items:center;min-width:0}
+.opCustomerIdentityName{display:block;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;line-height:1.15;font-weight:700;letter-spacing:-.018em;color:var(--ink,#1d1d1f)}
+@media(max-width:700px){.opCustomerIdentityName{max-width:150px;font-size:16px}.opCustomerWho .avatar{width:36px;height:36px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.btn:active,.nav button:active{transform:none!important}}
 @media(prefers-reduced-transparency:reduce){.top{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.opLivePanel{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 @media(prefers-contrast:more){.top,.card,.table,.row,.storeTile{border-color:#8e8e93!important}.btn.secondary{border-color:#6e6e73!important}}
