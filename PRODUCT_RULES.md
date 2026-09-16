@@ -46,9 +46,11 @@ Database constraints / guards:
 - Removing a clock record from active timesheets is a soft delete/void only.
 - Deleted records remain in History & Audit and can be restored.
 - Manual edits retain original values and audit metadata.
-- Owner and Manager Overview show one live `Clocked In Now` metric containing only the number of employees currently clocked in.
-- The live metric updates when employees clock in or out; it does not add a detailed live-attendance panel to Timesheets & Payroll.
-- Platform Admin Owner View does not receive this Owner/Manager live-count card.
+- Owner and Manager Overview use a small top-right `Live Employees` status button instead of a dashboard metric tile.
+- The Live Employees button shows the number of employees currently clocked in as a compact badge.
+- Hovering, focusing, or clicking the Live Employees button shows the currently clocked-in employees with their location and clock-in time.
+- Live employee status updates when employees clock in or out through Supabase Realtime; it does not add a detailed live-attendance panel to Timesheets & Payroll.
+- Platform Admin Owner View does not receive this Owner/Manager live-status control.
 - Each employee punch is independent, so multiple employees may be clocked in at the same store at the same time.
 - The employee's physical clock-in punch is the effective/payable clock-in time. Scheduled store opening is retained as schedule metadata and must not replace a real employee clock-in punch.
 - If an employee physically clocks out on or before that shift's captured scheduled store closing time, the employee's physical clock-out is the effective/payable clock-out time.
