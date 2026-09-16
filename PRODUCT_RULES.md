@@ -41,6 +41,16 @@ Database constraints / guards:
 - PIN confirmation shows a live green `Match` state when both entries match and a red mismatch state when they do not.
 - PIN confirmation does not create a second credential; only the single canonical employee PIN is stored.
 
+## Manager invitations and access
+- Manager onboarding uses the same secure 24-hour OnePoint invitation-token flow as Owner onboarding.
+- Pending and expired Manager invitations may be resent manually; resending invalidates the previous unused invitation token.
+- Before a Manager accepts the invitation, the Owner may edit the Manager name, login email, and assigned locations. Saving a pending invitation issues a fresh invitation and invalidates the previous link.
+- An active Manager's login email is not changed from the invitation editor; active-account credential changes must use an authenticated account/security workflow.
+- A pending or expired Manager invitation may be cancelled. Cancellation invalidates the outstanding invitation token, preserves the membership/audit history, and prevents the cancelled link from being accepted.
+- Managers are displayed in separate Active, Invitations, and Inactive views. Cancelled invitations are retained for audit but do not remain in the actionable invitation list.
+- The Active Manager view displays the Manager's most recent authenticated sign-in time when available; if no successful sign-in exists, show `Never signed in`.
+- Manager location assignments remain restricted to stores belonging to or accessible within the Owner organization; invitation management does not expand Manager permissions.
+
 ## Time history and live attendance
 - Clock-in/out history is retained indefinitely in the product model.
 - Removing a clock record from active timesheets is a soft delete/void only.
@@ -49,6 +59,7 @@ Database constraints / guards:
 - Owner and Manager Overview use a small top-right `Live Employees` status button instead of a dashboard metric tile.
 - The Live Employees button shows the number of employees currently clocked in as a compact badge.
 - Hovering, focusing, or clicking the Live Employees button shows the currently clocked-in employees with their location and clock-in time.
+- The Live Employees hover target includes the popup itself so the panel remains visible while the pointer moves from the header icon into the employee list.
 - Live employee status updates when employees clock in or out through Supabase Realtime; it does not add a detailed live-attendance panel to Timesheets & Payroll.
 - Platform Admin Owner View does not receive this Owner/Manager live-status control.
 - Each employee punch is independent, so multiple employees may be clocked in at the same store at the same time.
@@ -66,13 +77,27 @@ Database constraints / guards:
 ## Location ordering
 - Each Owner can drag and drop accessible locations into a preferred display order.
 - The order is persistent per Owner organization and is shared between the Locations page and Overview store cards.
+- The Owner's saved location order is the preferred store order for store selectors and location-access lists throughout Owner, Manager, and Platform Admin Owner View where the same stores are displayed.
+- Timesheets & Payroll location selectors must follow this preferred order instead of reverting to store-code or database query order.
+- Employee primary-location selectors and Manager location-access selectors should use the same preferred order when those accessible stores are shown.
+- Managers may read the Owner's preferred order for locations they are authorized to access, but Managers cannot modify the Owner's saved order.
 - Shared locations can participate in the receiving Owner's display order without changing the source Owner's order or ownership.
 - Platform Admin Owner View uses the selected Owner's same stored location order and may adjust that order with Platform Admin authority.
+
+## Portal branding and status presentation
+- Owner and Manager sidebars use the organization branding area as a centered identity block.
+- The organization logo appears first when configured, followed directly by the organization/business name.
+- After a clear vertical gap, the sidebar displays centered `OnePoint` and `Time & Attendance` product branding.
+- The top-right Owner/Manager identity displays the person's name prominently and does not repeat an Owner/Manager role tag.
+- Status presentation is consistent across the OnePoint application: `Active` uses a solid green badge with high-contrast text; `Inactive` and `Expired` use a solid red badge with high-contrast text.
+- Status color is a presentation aid only and never changes the underlying authorization, invitation, or organization state.
 
 ## Payroll
 - Employee pay rate is optional.
 - Job code is optional.
 - Scheduled opening and closing times are captured on the shift for schedule comparison and closing-time enforcement, but a real employee clock-in punch remains the payable start time.
+- Scheduled Open and Scheduled Close are backend/audit metadata and are not shown as normal Timesheets & Payroll columns.
+- Adjusted and missed clock-outs are explained contextually from the Clock Out value on hover/focus rather than through permanent schedule columns.
 - For both DFW and Basic payroll presentation, a real clock-out on or before captured store close uses the real punch time; a real clock-out after captured store close is capped to captured store close for payable hours while retaining the actual punch for audit.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
 - Managers see payroll only for authorized stores.
