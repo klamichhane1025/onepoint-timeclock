@@ -3,6 +3,8 @@ if(window.__onePointAppleInterface)return;window.__onePointAppleInterface=true;
 const content=document.querySelector('#content');if(!content)return;
 const path=location.pathname.replace(/\/+$/,'')||'/';
 const identityPortal=path==='/owner'||path==='/manager';
+const compactPortal=['/owner','/manager','/admin'].includes(path);
+if(compactPortal)document.documentElement.classList.add('opApplePortal');
 const unwanted=[
  'Owned and shared locations are listed together. Purple/Shared labels identify partner locations.',
  'POS browsers registered for employee clock access. Machine ID is a OnePoint-generated device identifier; web browsers do not expose the physical MAC address.'
@@ -63,7 +65,7 @@ async function personalizeIdentity(){
  try{
   const identity=await resolveIdentity();if(!identity)return;
   const avatar=who.querySelector('.avatar');
-  const info=[...who.children].find(el=>el!==avatar&&!el.matches('button'));
+  const info=[...who.children].find(el=>el!==avatar&&!el.matches('button')&&!el.matches('.opProfileChevron'));
   if(!info)return;
   let name=info.querySelector('b,.opCustomerIdentityName');
   if(!name){name=document.createElement('b');info.prepend(name)}
