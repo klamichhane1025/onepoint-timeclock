@@ -1,0 +1,30 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { DateTime } from "npm:luxon@3.5.0";
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const tp=(v:string|null)=>(v||"").slice(0,8);
+Deno.serve(async(req:Request)=>{
+ if(req.method==="OPTIONS")return new Response("ok",{headers:cors});if(req.method!=="POST")return json({error:"Method not allowed"},405);
+ const url=Deno.env.get("SUPABASE_URL")!,anon=Deno.env.get("SUPABASE_ANON_KEY")!,service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");if(!token)return json({error:"Missing authorization"},401);
+ const caller=createClient(url,anon,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}}),admin=createClient(url,service,{auth:{persistSession:false}});const{data:{user},error:uErr}=await caller.auth.getUser();if(uErr||!user)return json({error:"Invalid session"},401);
+ let body:any;try{body=await req.json()}catch{return json({error:"Invalid JSON"},400)};if(String(body.action||"")!=="edit_entry")return json({error:"Unsupported action"},400);
+ try{
+  const id=String(body.entry_id||""),reasonRaw=String(body.reason||"").trim(),reason=reasonRaw||null,inRaw=String(body.actual_clock_in||""),outRaw=body.actual_clock_out?String(body.actual_clock_out):null;if(!id)return json({error:"Entry is required."},400);
+  const inDt=DateTime.fromISO(inRaw,{setZone:true}),outDt=outRaw?DateTime.fromISO(outRaw,{setZone:true}):null;if(!inDt.isValid||outDt&&!outDt.isValid)return json({error:"Enter valid clock times."},400);if(outDt&&outDt<=inDt)return json({error:"Clock Out must be after Clock In."},400);
+  const{data:entry,error:eErr}=await admin.from("time_entries").select("*,stores(id,organization_id,timezone,payroll_logic)").eq("id",id).maybeSingle();if(eErr||!entry)return json({error:"Clock record not found."},404);if(entry.is_void)return json({error:"Restore this record before editing it."},409);
+  const{data:membership}=await admin.from("organization_users").select("id,role,active").eq("organization_id",entry.organization_id).eq("user_id",user.id).eq("active",true).in("role",["owner","manager"]).maybeSingle();if(!membership)return json({error:"Owner or Manager access is required for this record."},403);
+  const store:any=entry.stores,zone=store.timezone||'America/Chicago';let payableIn=inDt.toUTC(),payableOut=outDt?.toUTC()||null,warning:string|null=null,openSnap=entry.scheduled_open_at?DateTime.fromISO(entry.scheduled_open_at,{zone:'utc'}):null,closeSnap=entry.scheduled_close_at?DateTime.fromISO(entry.scheduled_close_at,{zone:'utc'}):null;
+  if((entry.payroll_logic_snapshot==='dfw'||store.payroll_logic==='dfw')&&(!openSnap||!closeSnap)){
+   const local=inDt.setZone(zone),today=local.startOf('day'),prev=today.minus({days:1}),days=[today,prev],wds=days.map(d=>d.weekday%7);const{data:hrs}=await admin.from("store_hours").select("weekday,open_time,close_time,closed").eq("store_id",entry.store_id).in("weekday",wds);const build=(day:any)=>{const r=(hrs||[]).find((x:any)=>x.weekday===day.weekday%7);if(!r||r.closed||!r.open_time||!r.close_time)return null;let op=DateTime.fromISO(`${day.toISODate()}T${tp(r.open_time)}`,{zone}),cl=DateTime.fromISO(`${day.toISODate()}T${tp(r.close_time)}`,{zone});if(cl<=op)cl=cl.plus({days:1});return{open:op.toUTC(),close:cl.toUTC()}};let win=build(prev);if(!(win&&local.toUTC()>=win.open&&local.toUTC()<win.close))win=build(today);if(win){openSnap=win.open;closeSnap=win.close}}
+  let early=false,adjusted=false;
+  if(entry.payroll_logic_snapshot==='dfw'||store.payroll_logic==='dfw'){
+   if(openSnap&&closeSnap){const ai=inDt.toUTC();payableIn=ai<openSnap?openSnap:ai;if(outDt){const ao=outDt.toUTC();early=ao<closeSnap;adjusted=ao>closeSnap;payableOut=ao>closeSnap?closeSnap:ao;if(payableOut<payableIn)payableOut=payableIn}else if(entry.missed_clock_out&&entry.payable_clock_out){payableOut=DateTime.fromISO(entry.payable_clock_out,{zone:'utc'})}}
+   else{payableIn=inDt.toUTC();payableOut=outDt?inDt.toUTC():null;warning='Captured operating hours are unavailable for this older shift; payable duration requires review.'}
+  }
+  const old={actual_clock_in:entry.actual_clock_in,actual_clock_out:entry.actual_clock_out,payable_clock_in:entry.payable_clock_in,payable_clock_out:entry.payable_clock_out,early_clock_out:entry.early_clock_out,missed_clock_out:entry.missed_clock_out,close_time_adjusted:entry.close_time_adjusted};const next:any={actual_clock_in:inDt.toUTC().toISO(),actual_clock_out:outDt?.toUTC().toISO()||null,payable_clock_in:payableIn.toISO(),payable_clock_out:payableOut?.toISO()||null,early_clock_out:early,close_time_adjusted:adjusted||Boolean(entry.missed_clock_out)};if(!entry.scheduled_open_at&&openSnap)next.scheduled_open_at=openSnap.toISO();if(!entry.scheduled_close_at&&closeSnap)next.scheduled_close_at=closeSnap.toISO();
+  const{data:updated,error:upErr}=await admin.from("time_entries").update(next).eq("id",id).select("id,actual_clock_in,actual_clock_out,payable_clock_in,payable_clock_out,scheduled_open_at,scheduled_close_at,early_clock_out,missed_clock_out,close_time_adjusted").single();if(upErr)throw upErr;
+  const{error:aErr}=await admin.from("audit_logs").insert({organization_id:entry.organization_id,actor_user_id:user.id,action:"time_entry_corrected",entity_type:"time_entry",entity_id:id,details:{reason,old,new:next,warning,schedule_snapshot_preserved:Boolean(entry.scheduled_open_at&&entry.scheduled_close_at),actor_role:membership.role}});if(aErr)throw aErr;
+  return json({ok:true,entry:updated,warning});
+ }catch(error){console.error(error);return json({error:error instanceof Error?error.message:"Unexpected error"},500)}
+});
