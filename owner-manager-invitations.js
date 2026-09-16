@@ -39,9 +39,9 @@
   function inviteModal(c){openDrawer(`<h2>Invite Manager</h2><div class="field"><label>Manager Name *</label><input id="opMgrName"></div><div class="field"><label>Email *</label><input id="opMgrEmail" type="email"></div><div class="field"><label>Location Access</label>${storeChecks()}</div><div class="actions"><button class="btn primary" id="opMgrSave">Send Invitation</button><button class="btn secondary" id="opMgrClose">Cancel</button></div>`);$('#opMgrClose').onclick=closeDrawer;$('#opMgrSave').onclick=async()=>{const btn=$('#opMgrSave'),old=btn.textContent;btn.disabled=true;btn.textContent='Sending…';try{const display_name=$('#opMgrName').value.replace(/\s+/g,' ').trim(),email=$('#opMgrEmail').value.trim().toLowerCase(),store_ids=$$('.opMgrStore:checked').map(x=>x.value);if(!display_name)throw new Error('Manager Name is required.');if(!email||!email.includes('@'))throw new Error('A valid Manager Email is required.');await invoke(c,{action:'invite_manager',organization_id:c.orgId,email,display_name,store_ids});closeDrawer();selectedTab='invitations';show(`Invitation sent to ${email}.`,'Manager invited','success');await render(true)}catch(e){show(e.message||String(e),'Managers')}finally{btn.disabled=false;btn.textContent=old}}}
   async function render(force=false){
     const seq=++renderSeq;
-    try{const c=await context();if(!force&&snapshot){}else await load(c);if(seq!==renderSeq)return;draw(snapshot);
+    try{const c=await context();if(force||!snapshot)await load(c);if(seq!==renderSeq)return;draw(snapshot);
       $('#opMgrInvite').onclick=()=>inviteModal(c);
-      $$('.opMgrTab').forEach(b=>b.onclick=()=>{selectedTab=b.dataset.tab;draw(snapshot);render(false)});
+      $$('.opMgrTab').forEach(b=>b.onclick=()=>{selectedTab=b.dataset.tab;render(false)});
       $$('.opMgrEdit').forEach(b=>b.onclick=()=>editModal((snapshot.managers||[]).find(m=>m.id===b.dataset.id),c));
       $$('.opMgrResend').forEach(b=>b.onclick=async()=>{const old=b.textContent;b.disabled=true;b.textContent='Sending…';try{await invoke(c,{action:'resend_manager',organization_id:c.orgId,membership_id:b.dataset.id});show('A fresh 24-hour invitation was sent. The previous invitation is invalid.','Manager invitation','success');await render(true)}catch(e){show(e.message||String(e),'Manager invitation')}finally{b.disabled=false;b.textContent=old}});
       $$('.opMgrCancel').forEach(b=>b.onclick=()=>{const m=(snapshot.managers||[]).find(x=>x.id===b.dataset.id);if(!confirm(`Cancel the invitation for ${m?.display_name||m?.email||'this Manager'}? The current invitation link will stop working.`))return;(async()=>{try{await invoke(c,{action:'cancel_manager',organization_id:c.orgId,membership_id:b.dataset.id});show('Manager invitation cancelled.','Managers','success');await render(true)}catch(e){show(e.message||String(e),'Managers')}})()});
@@ -49,7 +49,7 @@
       $$('.opMgrReactivate').forEach(b=>b.onclick=async()=>{try{const{error}=await sb.from('organization_users').update({active:true}).eq('id',b.dataset.id).eq('organization_id',c.orgId);if(error)throw error;show('Manager reactivated.','Managers','success');selectedTab='active';await render(true)}catch(e){show(e.message||String(e),'Managers')}});
     }catch(e){show(e.message||String(e),'Managers')}
   }
-  function managersSelected(){return!!$('#nav [data-tab="managers"].active}
+  function managersSelected(){return!!$('#nav [data-tab="managers"].active')}
   document.addEventListener('click',e=>{const b=e.target.closest('#nav [data-tab="managers"]');if(b)setTimeout(()=>{snapshot=null;render(true)},280)},true);
   setTimeout(()=>{if(managersSelected())render(true)},900);
   window.onePointManagerInvitations={refresh:()=>{snapshot=null;return render(true)}};
