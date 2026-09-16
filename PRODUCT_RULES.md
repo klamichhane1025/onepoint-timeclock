@@ -22,6 +22,12 @@
 - A browser registered as a OnePoint POS/cashier device keeps its trusted Time Clock device credential, but it must not persist Owner, Manager, or Platform Admin portal authentication.
 - A fresh navigation from a registered POS device into Owner, Manager, or Admin requires a fresh human login. Reloading an already-open authenticated portal page does not intentionally interrupt the user mid-task.
 - Platform Admin may activate a new POS from either the Time Clock activation route or the cashier-domain `/activate` route; both must require fresh Platform Admin authentication on a registered POS.
+- POS identity must not depend on Wi-Fi SSID, Wi-Fi password, router identity, or public IP address. Network changes may update audit metadata but must not invalidate an otherwise trusted POS browser.
+- A trusted POS browser uses a OnePoint machine ID plus browser-held cryptographic/recovery credentials so it can recover its store assignment after token rotation or normal browser restarts.
+- Browser security boundaries prevent Chrome, Edge, Firefox, Safari, and other browsers from silently reading each other's private storage. Therefore the first use of a different browser on an already-activated POS uses a short-lived one-use `Link another browser` flow instead of repeating store onboarding.
+- The trusted source browser may create a 10-minute one-use browser-link code/link. Redeeming it creates an independent trusted browser registration for the same store; after that, that browser opens directly to Clock In / Clock Out and maintains its own recovery credential.
+- Browser-link codes never grant Owner, Manager, or Platform Admin portal authentication and do not bypass employee ID/PIN requirements for punches.
+- Clearing all site data, reinstalling/resetting a browser profile, or using private/incognito browsing can remove that browser's trusted device credential; no web application can securely recover a deleted browser credential without another trusted credential or explicit re-link/activation step.
 
 ## Employee identity
 - Employee identity is scoped to the organization, never globally.
