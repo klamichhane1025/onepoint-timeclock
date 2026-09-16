@@ -36,32 +36,30 @@
     const fallback=new Map(data.stores.map((s,i)=>[s.id,i]));
     return id=>data.order.has(id)?data.order.get(id):100000+(fallback.get(id)??99999)
   }
-  function sortRows(rows,data=cache){
-    const rank=ranker(data);
-    return[...(rows||[])].sort((a,b)=>rank(a.id)-rank(b.id))
-  }
+  function sortRows(rows,data=cache){const rank=ranker(data);return[...(rows||[])].sort((a,b)=>rank(a.id)-rank(b.id))}
   function reorderSelect(select,data){
     if(select.querySelector('optgroup'))return;
     const ids=new Set(data.stores.map(x=>x.id)),options=[...select.options],matched=options.filter(o=>ids.has(o.value));
     if(matched.length<2)return;
-    const rank=ranker(data),sorted=[...matched].sort((a,b)=>rank(a.value)-rank(b.value));
-    const special=options.filter(o=>!ids.has(o.value));
+    const rank=ranker(data),sorted=[...matched].sort((a,b)=>rank(a.value)-rank(b.value)),special=options.filter(o=>!ids.has(o.value));
     [...special,...sorted].forEach(o=>select.appendChild(o))
   }
   function reorderCheckboxContainers(data){
     const ids=new Set(data.stores.map(x=>x.id)),rank=ranker(data);
-    const containers=$$('.selectMenuPanel,.apSelectPanel,.list,.radioGroup').filter(c=>{
-      const labels=[...c.children].filter(x=>x.matches?.('label')&&ids.has(x.querySelector('input[type="checkbox"]')?.value||''));return labels.length>=2
-    });
-    for(const c of containers){
-      const labels=[...c.children].filter(x=>x.matches?.('label')&&ids.has(x.querySelector('input[type="checkbox"]')?.value||''));
-      labels.sort((a,b)=>rank(a.querySelector('input')?.value||'')-rank(b.querySelector('input')?.value||''));
-      labels.forEach(x=>c.appendChild(x))
+    const containers=$$('.selectMenuPanel,.apSelectPanel,.list,.radioGroup,.opMgrStoreList').filter(c=>[...c.children].filter(x=>x.matches?.('label')&&ids.has(x.querySelector('input[type="checkbox"]')?.value||'')).length>=2);
+    for(const c of containers){const labels=[...c.children].filter(x=>x.matches?.('label')&&ids.has(x.querySelector('input[type="checkbox"]')?.value||''));labels.sort((a,b)=>rank(a.querySelector('input')?.value||'')-rank(b.querySelector('input')?.value||''));labels.forEach(x=>c.appendChild(x))}
+  }
+  function storeIdForElement(el){return el.dataset?.store||el.dataset?.apStore||el.dataset?.opStoreId||''}
+  function reorderStoreCollections(data){
+    const ids=new Set(data.stores.map(x=>x.id)),rank=ranker(data);
+    for(const c of $$('.mgPeriodGrid,.opPeriodGrid,.apGrid')){
+      const items=[...c.children].filter(x=>{const id=storeIdForElement(x);return id&&ids.has(id)});if(items.length<2)continue;
+      items.sort((a,b)=>rank(storeIdForElement(a))-rank(storeIdForElement(b)));items.forEach(x=>c.appendChild(x))
     }
   }
   async function apply(force=false){
     if(running)return;running=true;observer?.disconnect();
-    try{const data=await load(force);if(!data)return;$$('select').forEach(s=>reorderSelect(s,data));reorderCheckboxContainers(data)}catch(e){console.warn('Preferred store order:',e?.message||e)}finally{running=false;const content=$('#content');if(content)observer?.observe(content,{subtree:true,childList:true})}
+    try{const data=await load(force);if(!data)return;$$('select').forEach(s=>reorderSelect(s,data));reorderCheckboxContainers(data);reorderStoreCollections(data)}catch(e){console.warn('Preferred store order:',e?.message||e)}finally{running=false;const content=$('#content');if(content)observer?.observe(content,{subtree:true,childList:true})}
   function schedule(force=false,delay=80){clearTimeout(timer);timer=setTimeout(()=>apply(force),delay)}
   const content=$('#content');if(content){observer=new MutationObserver(ms=>{if(ms.some(m=>m.addedNodes.length))schedule(false,70)});observer.observe(content,{subtree:true,childList:true})}
   document.addEventListener('click',e=>{if(e.target.closest('#nav button,[data-tab],[data-aw-tab],button'))schedule(false,160)},true);
