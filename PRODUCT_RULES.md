@@ -2,9 +2,18 @@
 
 ## Tenant isolation
 - Each owner/business is a separate organization (tenant).
-- Owners and managers can access only their own organization and assigned stores.
+- Owners and Managers can access only their own organization and stores shared into that organization; neither role receives cross-tenant Platform Admin authority.
 - Platform Admin is the only cross-tenant role.
-- Supabase RLS will enforce organization isolation; UI filtering alone is not sufficient.
+- Supabase RLS enforces organization isolation; UI filtering alone is not sufficient.
+
+## Manager authority
+- An active Manager retains database role `manager` for identity and audit history, but has Owner-equivalent operational authority inside that Manager's organization.
+- Owner-equivalent Manager authority includes the organization's Overview, Employees, Locations and operating hours, Managers, Job Codes, Timesheets & Payroll, Registered Devices, preferred location order, business branding/theme, employee pay changes, and shared-store payroll/pay overrides available to the organization.
+- Manager access is organization-wide. Legacy `organization_user_stores` assignment rows are compatibility metadata and must not reduce an active Manager's permissions.
+- New active stores are made available to every active Manager in the organization, and active Managers remain available across all active organization stores.
+- Managers may invite, edit, resend, cancel, deactivate, and reactivate other Managers using the same secure Manager lifecycle available to the Owner.
+- Managers are never converted to `owner` records merely to obtain these permissions.
+- Owner-equivalent Manager access never grants Platform Admin privileges, cross-business access, or access to Platform-Admin-only recovery controls.
 
 ## Portal sessions and POS security
 - On normal Owner/Manager workstations, OnePoint persists the authenticated session and relies on Supabase refresh-token rotation so the user is not repeatedly signed out merely because the tab or browser was closed.
@@ -22,7 +31,7 @@
 - Once organizations are connected by an active shared-store/employee relationship, every employee visible in the receiving Owner's combined roster (owned + shared employees) must have a unique normalized name so payroll, timesheets, and employee selection remain unambiguous.
 - If a shared-roster name conflict exists, one employee must be renamed before the share/assignment can continue.
 - Sharing an employee never creates a second employee account. The shared employee keeps the same canonical employee record, Employee ID, PIN, and login across participating locations.
-- A receiving Owner must not create a duplicate employee record merely to make a shared employee available.
+- A receiving organization must not create a duplicate employee record merely to make a shared employee available.
 - Automatic employee IDs increment from the highest employee ID within that organization only.
 - Deleting an employee is a soft delete: the canonical employee row and all historical punches/audit history remain intact.
 - Once an employee is deleted, that Employee ID and normalized name may be reused for a new employee in the same organization.
@@ -36,7 +45,7 @@ Database constraints / guards:
 ## PIN and password entry
 - Password and PIN fields provide a visibility control so the user can temporarily reveal the entered secret.
 - Only one visibility/reveal control should be shown per password or PIN field; duplicate eye icons must be suppressed.
-- When an Owner or Platform Admin creates a new employee PIN, the PIN must be entered twice before the employee can be saved.
+- When an Owner, Manager, or Platform Admin creates a new employee PIN, the PIN must be entered twice before the employee can be saved.
 - When an employee PIN is changed, both new-PIN fields must either be blank to keep the current PIN or contain the same valid 4–8 digit PIN.
 - PIN confirmation shows a live green `Match` state when both entries match and a red mismatch state when they do not.
 - PIN confirmation does not create a second credential; only the single canonical employee PIN is stored.
@@ -44,12 +53,12 @@ Database constraints / guards:
 ## Manager invitations and access
 - Manager onboarding uses the same secure 24-hour OnePoint invitation-token flow as Owner onboarding.
 - Pending and expired Manager invitations may be resent manually; resending invalidates the previous unused invitation token.
-- Before a Manager accepts the invitation, the Owner may edit the Manager name, login email, and assigned locations. Saving a pending invitation issues a fresh invitation and invalidates the previous link.
+- Before a Manager accepts the invitation, an authorized Owner-equivalent business user may edit the Manager name and login email. Saving a pending invitation issues a fresh invitation and invalidates the previous link.
 - An active Manager's login email is not changed from the invitation editor; active-account credential changes must use an authenticated account/security workflow.
 - A pending or expired Manager invitation may be cancelled. Cancellation invalidates the outstanding invitation token, preserves the membership/audit history, and prevents the cancelled link from being accepted.
 - Managers are displayed in separate Active, Invitations, and Inactive views. Cancelled invitations are retained for audit but do not remain in the actionable invitation list.
 - The Active Manager view displays the Manager's most recent authenticated sign-in time when available; if no successful sign-in exists, show `Never signed in`.
-- Manager location assignments remain restricted to stores belonging to or accessible within the Owner organization; invitation management does not expand Manager permissions.
+- Store-assignment rows may be retained for backward compatibility, but they do not restrict an active Manager's organization-wide authority.
 
 ## Time history and live attendance
 - Clock-in/out history is retained indefinitely in the product model.
@@ -72,35 +81,27 @@ Database constraints / guards:
 - During that 60-minute grace period the employee remains clocked in and may still physically clock out; the same store-close cap above applies if that punch is late.
 - If the shift is still open after the full 60-minute grace period, OnePoint automatically finalizes the shift effective at the captured store closing time, marks it as a missed clock-out / close-time adjustment, and records the later system-finalization timestamp for audit purposes.
 - Automatic missed-clock-out finalization does not fabricate a physical punch: `actual_clock_out` remains distinguishable from the system-applied payable closing time.
-- Once a missed shift is system-finalized, it is no longer considered an active/open shift for concurrency checks and must not block that employee from clocking in at another authorized store under the same Owner.
+- Once a missed shift is system-finalized, it is no longer considered an active/open shift for concurrency checks and must not block that employee from clocking in at another authorized store under the same Owner organization.
 
 ## Location ordering
-- Each Owner can drag and drop accessible locations into a preferred display order.
-- The order is persistent per Owner organization and is shared between the Locations page and Overview store cards.
-- The Owner's saved location order is the preferred store order for store selectors and location-access lists throughout Owner, Manager, and Platform Admin Owner View where the same stores are displayed.
+- Each Owner or active Manager can drag and drop accessible locations into the organization's preferred display order.
+- The order is persistent per organization and is shared between the Locations page and Overview store cards.
+- The saved location order is the preferred store order for store selectors and location-access lists throughout Owner, Manager, and Platform Admin Owner View where the same stores are displayed.
 - Timesheets & Payroll location selectors must follow this preferred order instead of reverting to store-code or database query order.
-- Employee primary-location selectors and Manager location-access selectors should use the same preferred order when those accessible stores are shown.
-- Managers may read the Owner's preferred order for locations they are authorized to access, but Managers cannot modify the Owner's saved order.
-- Shared locations can participate in the receiving Owner's display order without changing the source Owner's order or ownership.
-- Platform Admin Owner View uses the selected Owner's same stored location order and may adjust that order with Platform Admin authority.
+- Employee primary-location selectors use the same preferred order when those accessible stores are shown.
+- Shared locations can participate in the receiving organization's display order without changing the source organization's order or ownership.
+- Platform Admin Owner View uses the selected organization's same stored location order and may adjust that order with Platform Admin authority.
 
-## Portal branding and status presentation
+## Portal branding, profile, and status presentation
 - Owner and Manager sidebars use the organization branding area as a centered identity block.
 - The organization logo appears first when configured, followed directly by the organization/business name.
 - After a clear vertical gap, the sidebar displays centered `OnePoint` and `Time & Attendance` product branding.
 - The top-right Owner/Manager identity displays the person's name prominently and does not repeat an Owner/Manager role tag.
+- My Account, Notifications, and Sign Out are centralized under the top-right profile/name control rather than duplicated in the left navigation.
+- Owners and Managers can access business branding and portal-theme controls from My Account because both roles have organization-wide operational authority.
 - Status presentation is consistent across the OnePoint application: `Active` uses a solid green badge with high-contrast text; `Inactive` and `Expired` use a solid red badge with high-contrast text.
 - Status color is a presentation aid only and never changes the underlying authorization, invitation, or organization state.
-
-## Profile menu and compact interface
-- In Owner and Manager portals, the top-right user profile/name is the single entry point for personal account controls.
-- The profile popover contains `My Account`, `Notifications`, and `Sign Out`; Account and Logout are not duplicated in the left navigation or as separate top-bar buttons.
-- `My Account` displays the signed-in user's business, role, email, and applicable plan details together with password/security controls.
-- Owner `My Account` also contains Business Branding and Portal Theme controls. Managers can view their account/security controls but do not gain Owner-only branding authority.
-- Notifications are presented inside the profile popover rather than as a separate permanent navigation item. The notification surface must support an empty `all caught up` state and future OnePoint notification producers without requiring another top-level control.
-- Owner, Manager, and Platform Admin portals use the repository Apple-design refinement layer for compact buttons, cards, rows, tiles, tables, filters, and modal spacing.
-- Compact portal styling must reduce unused visual space without removing meaningful hierarchy, status indicators, focus states, or accessibility behavior.
-- The Employee Time Clock / POS interface is excluded from the compact desktop treatment so its punch controls retain larger practical touch targets.
+- Owner, Manager, and Admin business portals use the compact Apple-design spacing system; the Employee Time Clock retains larger touch-friendly controls.
 
 ## Payroll
 - Employee pay rate is optional.
@@ -110,5 +111,5 @@ Database constraints / guards:
 - Adjusted and missed clock-outs are explained contextually from the Clock Out value on hover/focus rather than through permanent schedule columns.
 - For both DFW and Basic payroll presentation, a real clock-out on or before captured store close uses the real punch time; a real clock-out after captured store close is capped to captured store close for payable hours while retaining the actual punch for audit.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
-- Managers see payroll only for authorized stores.
+- Owners and Managers have the same organization-wide payroll visibility and operational controls. Shared-store ownership boundaries and organization-specific pay overrides remain intact.
 - Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.
