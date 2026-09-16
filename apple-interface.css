@@ -9,6 +9,8 @@
 .opHeaderActionsOnly>.actions{margin-left:auto}
 .opApplePrimaryCard>.head:empty{display:none}
 .opApplePrimaryCard>.head>.opAppleEmptyLead{display:none}
+.badge.opStatusActive{background:#16803d!important;color:#fff!important;border:1px solid #16803d!important;box-shadow:0 1px 2px rgba(22,128,61,.18)}
+.badge.opStatusDanger{background:#d70015!important;color:#fff!important;border:1px solid #d70015!important;box-shadow:0 1px 2px rgba(215,0,21,.14)}
 .who.opCustomerWho{gap:11px}
 .opCustomerWho .avatar{width:38px;height:38px;font-size:12px;font-weight:760;letter-spacing:-.01em}
 .opCustomerIdentity{display:flex;align-items:center;min-width:0}
@@ -16,4 +18,4 @@
 @media(max-width:700px){.opCustomerIdentityName{max-width:150px;font-size:16px}.opCustomerWho .avatar{width:36px;height:36px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.btn:active,.nav button:active{transform:none!important}}
 @media(prefers-reduced-transparency:reduce){.top{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.opLivePanel{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
-@media(prefers-contrast:more){.top,.card,.table,.row,.storeTile{border-color:#8e8e93!important}.btn.secondary{border-color:#6e6e73!important}}
+@media(prefers-contrast:more){.top,.card,.table,.row,.storeTile{border-color:#8e8e93!important}.btn.secondary{border-color:#6e6e73!important}.badge.opStatusActive,.badge.opStatusDanger{outline:1px solid currentColor;outline-offset:1px}}
