@@ -20,5 +20,5 @@ document.addEventListener('click',e=>{const b=e.target.closest('#kSetupDisabled[
 const observer=new MutationObserver(()=>requestAnimationFrame(decorate));observer.observe(document.documentElement,{childList:true,subtree:true});
 let tries=0;const timer=setInterval(()=>{decorate();if(++tries>40)clearInterval(timer)},250);
 window.OnePointBrowserLink={createPair,redeem,refreshCurrentRecovery};
-window.onePointBrowserLinkReady=Promise.resolve(window.onePointDeviceReady).then(async ready=>{if(ready){await refreshCurrentRecovery();return ready}return await redeemHash()}).catch(e=>{console.warn('POS browser link bootstrap:',e);return null});
+window.onePointBrowserLinkReady=Promise.resolve(window.onePointDeviceReady).then(async ready=>{if(ready){if(window.onePointRecoveryRefreshReady)await Promise.resolve(window.onePointRecoveryRefreshReady).catch(()=>null);else await refreshCurrentRecovery();return ready}return await redeemHash()}).catch(e=>{console.warn('POS browser link bootstrap:',e);return null});
 })();
