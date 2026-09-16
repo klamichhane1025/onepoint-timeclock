@@ -9,6 +9,11 @@ const unwanted=[
 ];
 const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
 let observer=null,identityObserver=null,running=false,identityRunning=false,raf=0,identityTimer=0,cachedIdentity=null;
+function statusClass(text){const t=norm(text);if(t==='active')return'opStatusActive';if(t==='inactive'||t==='expired')return'opStatusDanger';return''}
+function decorateStatuses(){
+ for(const badge of content.querySelectorAll('.badge')){const cls=statusClass(badge.textContent);badge.classList.remove('opStatusActive','opStatusDanger');if(cls)badge.classList.add(cls)}
+ for(const cell of content.querySelectorAll('td')){if(cell.children.length)continue;const cls=statusClass(cell.textContent);if(!cls)continue;const text=cell.textContent.trim();cell.textContent='';const badge=document.createElement('span');badge.className=`badge ${cls}`;badge.textContent=text;cell.appendChild(badge)}
+}
 function clean(){
  if(running)return;running=true;observer?.disconnect();
  try{
@@ -29,6 +34,7 @@ function clean(){
     }
    }
   }
+  decorateStatuses();
   const firstCard=content.querySelector(':scope > .card')||content.querySelector('.card');firstCard?.classList.add('opApplePrimaryCard');
  }finally{
   running=false;observer?.observe(content,{childList:true,subtree:true,characterData:true});
