@@ -52,7 +52,7 @@ Database constraints / guards:
 - Password and PIN fields provide a visibility control so the user can temporarily reveal the entered secret.
 - Only one visibility/reveal control should be shown per password or PIN field; duplicate eye icons must be suppressed.
 - When an Owner, Manager, or Platform Admin creates a new employee PIN, the PIN must be entered twice before the employee can be saved.
-- When an employee PIN is changed, both new-PIN fields must either be blank to keep the current PIN or contain the same valid 4–8 digit PIN.
+- When an employee PIN is changed, both new-PIN fields must either be blank to keep the current PIN or contain the same valid 4–8 character PIN using letters, numbers, or a mix of both.
 - PIN confirmation shows a live green `Match` state when both entries match and a red mismatch state when they do not.
 - PIN confirmation does not create a second credential; only the single canonical employee PIN is stored.
 
@@ -107,7 +107,7 @@ Database constraints / guards:
 - Owners and Managers can access business branding and portal-theme controls from My Account because both roles have organization-wide operational authority.
 - Status presentation is consistent across the OnePoint application: `Active` uses a solid green badge with high-contrast text; `Inactive` and `Expired` use a solid red badge with high-contrast text.
 - Status color is a presentation aid only and never changes the underlying authorization, invitation, or organization state.
-- Owner, Manager, and Admin business portals use the compact Apple-design spacing system; the Employee Time Clock retains larger touch-friendly controls.
+- Owner, Manager, and Admin business portals use the compact Apple-design spacing system; the Employee Time Clock retains larger touch-friendly controls.\n- Overview payroll/location cards use a compact premium analytics treatment with strong numeric hierarchy and lightweight sparklines rather than oversized empty card space. Shared locations retain their distinct shared-state treatment.
 
 ## Payroll
 - Employee pay rate is optional.
@@ -118,4 +118,4 @@ Database constraints / guards:
 - For both DFW and Basic payroll presentation, a real clock-out on or before captured store close uses the real punch time; a real clock-out after captured store close is capped to captured store close for payable hours while retaining the actual punch for audit.
 - Payroll can be viewed by employee, by store, or across all stores owned by or shared to the organization where access is authorized.
 - Owners and Managers have the same organization-wide payroll visibility and operational controls. Shared-store ownership boundaries and organization-specific pay overrides remain intact.
-- Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.
+- Store Payroll Overview uses a drilldown flow: select a store, select a dated completed payroll period, then view each employee who worked that store during the period with employee hours, pay rate/pay, total hours, and total hourly payroll for the store.\n- Owner and Manager Overview show store-level hourly payroll expense cards using the latest completed payroll period, prior-period change, hours, employee count, and a six-completed-period sparkline. Because monthly salary is not prorated into the existing hourly payroll total, the visual must label this value as hourly payroll expense and disclose the monthly-salary exclusion when applicable.
