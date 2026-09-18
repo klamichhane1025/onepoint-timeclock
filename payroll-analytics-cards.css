@@ -1,0 +1,39 @@
+/* Premium payroll analytics cards — inspired by compact Apple-style data views */
+.opPayrollVisualCard{position:relative;overflow:hidden;color:#fff!important;background:
+ radial-gradient(900px 220px at 86% -10%,rgba(92,184,255,.20),transparent 48%),
+ linear-gradient(155deg,#17303d 0%,#0d1b24 48%,#080d12 100%)!important;
+ border:1px solid rgba(255,255,255,.09)!important;border-radius:24px!important;padding:18px!important;
+ box-shadow:0 18px 42px rgba(10,18,28,.18),inset 0 1px 0 rgba(255,255,255,.06)!important;
+ transform:translateZ(0);transition:transform .16s var(--op-apple-ease),box-shadow .16s var(--op-apple-ease),border-color .16s var(--op-apple-ease)!important}
+.opPayrollVisualCard:hover{transform:translateY(-2px)!important;box-shadow:0 24px 54px rgba(10,18,28,.24),inset 0 1px 0 rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.16)!important}
+.opPayrollVisualCard:focus-visible{outline:3px solid rgba(65,170,255,.34);outline-offset:3px}
+.opPayrollVisualCard.opPayrollShared{background:
+ radial-gradient(760px 220px at 88% -10%,rgba(255,169,103,.18),transparent 48%),
+ linear-gradient(155deg,#5b2f1e 0%,#2c1914 47%,#120d0b 100%)!important}
+.opPayrollCardTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.opPayrollStoreBlock{min-width:0}.opPayrollStoreName{font-size:15px;font-weight:730;line-height:1.2;letter-spacing:-.018em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.opPayrollStoreCode{margin-top:3px;font-size:10.5px;color:rgba(255,255,255,.52)}
+.opPayrollSharedBadge{display:inline-flex;align-items:center;min-height:20px;padding:0 7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.09);color:rgba(255,255,255,.86);font-size:9.5px;font-weight:740;letter-spacing:.035em}
+.opPayrollEyebrow{margin-top:16px;font-size:10.5px;font-weight:650;color:rgba(255,255,255,.57);letter-spacing:.02em}
+.opPayrollHeroRow{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:5px}
+.opPayrollHeroValue{font-size:34px;line-height:.98;font-weight:620;letter-spacing:-.045em;color:#fff;font-variant-numeric:tabular-nums}
+.opPayrollDelta{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 8px;border-radius:999px;font-size:10.5px;font-weight:720;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.72)}
+.opPayrollDelta.up{color:#7fe2a6;background:rgba(52,199,89,.11)}.opPayrollDelta.down{color:#ff9b92;background:rgba(255,69,58,.11)}
+.opPayrollSpark{display:block;width:100%;height:74px;margin-top:12px;overflow:visible;color:#58b7ff}
+.opPayrollShared .opPayrollSpark{color:#ffae72}.opPayrollSparkBase{stroke:rgba(255,255,255,.09);stroke-width:1}.opPayrollSparkLine{stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.opPayrollSparkDot{fill:currentColor}.opPayrollMeta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.opPayrollMeta>div{min-width:0;padding:8px 9px;border-radius:12px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.045)}
+.opPayrollMeta span{display:block;font-size:9.5px;color:rgba(255,255,255,.48);white-space:nowrap}.opPayrollMeta b{display:block;margin-top:3px;font-size:12px;font-weight:650;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.opPayrollFoot{margin-top:10px;font-size:9.5px;color:rgba(255,255,255,.42)}
+.opPremiumMetric{position:relative;overflow:hidden;min-height:126px!important;border:1px solid rgba(60,60,67,.10)!important;border-radius:18px!important;background:linear-gradient(160deg,#fff 0%,#f8f8fa 100%)!important;box-shadow:0 10px 28px rgba(22,28,36,.055)!important}
+.opPremiumMetric::after{content:"";position:absolute;width:110px;height:110px;border-radius:50%;right:-46px;top:-54px;background:radial-gradient(circle,rgba(0,113,227,.10),rgba(0,113,227,0) 70%);pointer-events:none}
+.opPremiumMetric>span{position:relative;z-index:1;font-size:10.5px!important;font-weight:650;color:#77777c!important;letter-spacing:.015em}.opPremiumMetric>b{position:relative;z-index:1;font-size:30px!important;font-weight:650!important;letter-spacing:-.035em!important;font-variant-numeric:tabular-nums}
+.opPremiumMetric .opMetricMiniTrend{position:absolute;left:12px;right:12px;bottom:10px;height:30px;color:#0071e3;opacity:.76}.opPremiumMetric .opMetricMiniTrend path{stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.opPremiumMetric .opMetricMiniDelta{position:absolute;right:12px;top:12px;z-index:2;font-size:9.5px;font-weight:720;padding:3px 6px;border-radius:999px;background:#eef7f1;color:#16803d}.opPremiumMetric .opMetricMiniDelta.down{background:#fff0ef;color:#c9342b}
+.opPayrollSection>.head{align-items:flex-end}.opPayrollSection>.head .muted{max-width:620px}
+html.opApplePortal .opPeriodGrid,html.opApplePortal .mgPeriodGrid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px!important}
+html.opApplePortal .opPayrollVisualCard{padding:18px!important;border-radius:22px!important}
+html.opApplePortal .opPayrollVisualCard .opKpis,html.opApplePortal .opPayrollVisualCard .mgKpis{display:none!important}
+@media(max-width:760px){.opPayrollHeroValue{font-size:31px}.opPayrollMeta{grid-template-columns:repeat(3,minmax(0,1fr))}.opPremiumMetric{min-height:114px!important}html.opApplePortal .opPeriodGrid,html.opApplePortal .mgPeriodGrid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.opPayrollVisualCard:hover{transform:none!important}}
+@media(prefers-contrast:more){.opPayrollVisualCard{border-color:rgba(255,255,255,.42)!important}.opPayrollMeta>div{border-color:rgba(255,255,255,.22)}}
