@@ -37,3 +37,13 @@ html.opApplePortal .opPayrollVisualCard .opKpis,html.opApplePortal .opPayrollVis
 @media(max-width:760px){.opPayrollHeroValue{font-size:31px}.opPayrollMeta{grid-template-columns:repeat(3,minmax(0,1fr))}.opPremiumMetric{min-height:114px!important}html.opApplePortal .opPeriodGrid,html.opApplePortal .mgPeriodGrid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.opPayrollVisualCard:hover{transform:none!important}}
 @media(prefers-contrast:more){.opPayrollVisualCard{border-color:rgba(255,255,255,.42)!important}.opPayrollMeta>div{border-color:rgba(255,255,255,.22)}}
+
+.opPayrollPeriodStrip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:10px}
+.opPayrollPeriodStrip>span{min-width:0;padding:6px 5px;border-radius:9px;background:rgba(255,255,255,.035);text-align:center;border:1px solid rgba(255,255,255,.035)}
+.opPayrollPeriodStrip>span.current{background:rgba(88,183,255,.10);border-color:rgba(88,183,255,.16)}
+.opPayrollShared .opPayrollPeriodStrip>span.current{background:rgba(255,174,114,.10);border-color:rgba(255,174,114,.16)}
+.opPayrollPeriodStrip b,.opPayrollPeriodStrip small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opPayrollPeriodStrip b{font-size:8.5px;font-weight:720;color:rgba(255,255,255,.66);letter-spacing:.015em}
+.opPayrollPeriodStrip small{margin-top:2px;font-size:8.5px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums}
+.opMetricDateRange{position:absolute;left:13px;bottom:42px;z-index:2;font-size:9.5px;font-weight:620;color:#7b7b81;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.opPayrollPeriodStrip{grid-template-columns:repeat(5,minmax(58px,1fr));overflow-x:auto;padding-bottom:2px}.opMetricDateRange{bottom:39px}}
