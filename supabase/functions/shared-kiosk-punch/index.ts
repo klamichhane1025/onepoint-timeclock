@@ -21,6 +21,7 @@ async function sha256Hex(input: string) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 const timePart = (value: string | null) => (value || "").slice(0, 8);
+const validPin = (pin: string) => /^[A-Za-z0-9]{4,8}$/.test(pin);
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
@@ -50,6 +51,15 @@ Deno.serve(async (req: Request) => {
     const store: any = (device as any).stores;
     if (!store?.active) return json(req, { error: "Store onboard needed." }, 403);
 
+    const offlineEventId = String(body.offline_event_id || "").trim();
+    const capturedAtRaw = String(body.captured_at || "").trim();
+    const isOffline = Boolean(offlineEventId || capturedAtRaw);
+    if (isOffline) {
+      if (!/^[0-9a-fA-F-]{36}$/.test(offlineEventId) || !capturedAtRaw) return json(req, { error: "Invalid offline punch payload." }, 400);
+      const { data: priorOffline } = await admin.from("offline_punch_events").select("response").eq("kiosk_device_id", device.id).eq("offline_event_id", offlineEventId).maybeSingle();
+      if (priorOffline?.response && Object.keys(priorOffline.response).length) return json(req, priorOffline.response);
+    }
+
     const { data: organization } = await admin
       .from("organizations")
       .select("status,timeclock_enabled,timeclock_access_start,timeclock_access_end")
@@ -57,7 +67,16 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (!organization) return json(req, { error: "Business not found." }, 404);
 
-    const nowMs = Date.now();
+    const serverNow = new Date().toISOString();
+    let eventTime = DateTime.utc();
+    if (isOffline) {
+      eventTime = DateTime.fromISO(capturedAtRaw, { zone: "utc" });
+      if (!eventTime.isValid) return json(req, { error: "Invalid offline punch time." }, 400);
+      const serverNowDt = DateTime.utc();
+      if (eventTime > serverNowDt.plus({ minutes: 5 })) return json(req, { error: "Offline punch time is in the future." }, 400);
+      if (eventTime < serverNowDt.minus({ days: 7 })) return json(req, { error: "Offline punch is older than 7 days and requires manager correction." }, 409);
+    }
+    const nowMs = eventTime.toMillis();
     const accessStart = organization.timeclock_access_start ? new Date(organization.timeclock_access_start).getTime() : null;
     const accessEnd = organization.timeclock_access_end ? new Date(organization.timeclock_access_end).getTime() : null;
     if (
@@ -69,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     const employeeNumber = String(body.employee_number || "").trim();
     const pin = String(body.pin || "").trim();
-    if (!/^\d+$/.test(employeeNumber) || !/^\d{4,8}$/.test(pin)) return json(req, { error: "Enter a valid Employee ID and PIN." }, 400);
+    if (!/^\d+$/.test(employeeNumber) || !validPin(pin)) return json(req, { error: "Enter a valid Employee ID and PIN." }, 400);
 
     const employeeSelect = "id,organization_id,employee_number,name,pin_hash,base_pay_type,base_pay_rate,status";
     const candidates = new Map<string, any>();
@@ -92,8 +111,25 @@ Deno.serve(async (req: Request) => {
     if (matchedEmployees.length > 1) return json(req, { error: "This Employee ID and PIN combination is duplicated across shared Owners. Ask an administrator to change one employee PIN." }, 409);
     const employee = matchedEmployees[0];
 
-    const now = new Date().toISOString();
-    const nowUtc = DateTime.fromISO(now, { zone: "utc" });
+    const now = eventTime.toUTC().toISO()!;
+    const nowUtc = eventTime.toUTC();
+
+    async function offlineSuccess(response: any, timeEntryId: string) {
+      if (!isOffline) return response;
+      const payload = { ...response, offline_synced: true, captured_at: now, synced_at: serverNow };
+      const { error: receiptError } = await admin.from("offline_punch_events").insert({
+        kiosk_device_id: device.id, offline_event_id: offlineEventId, organization_id: device.organization_id, store_id: device.store_id,
+        employee_id: employee.id, requested_action: body.requested_action, captured_at: now, synced_at: serverNow, time_entry_id: timeEntryId, response: payload,
+      });
+      if (receiptError && receiptError.code !== "23505") throw receiptError;
+      if (receiptError?.code === "23505") {
+        const { data: prior } = await admin.from("offline_punch_events").select("response").eq("kiosk_device_id", device.id).eq("offline_event_id", offlineEventId).maybeSingle();
+        if (prior?.response) return prior.response;
+      }
+      await admin.from("audit_logs").insert({ organization_id: device.organization_id, actor_user_id: null, action: "offline_punch_synced", entity_type: "time_entry", entity_id: timeEntryId,
+        details: { employee_id: employee.id, store_id: device.store_id, kiosk_device_id: device.id, offline_event_id: offlineEventId, requested_action: body.requested_action, captured_at: now, synced_at: serverNow } });
+      return payload;
+    }
 
     async function operatingWindow(iso: string) {
       const zone = store.timezone || "America/Chicago";
@@ -134,7 +170,7 @@ Deno.serve(async (req: Request) => {
           payable_clock_out: payableOut,
           missed_clock_out: true,
           close_time_adjusted: true,
-          system_closed_at: now,
+          system_closed_at: serverNow,
         }).eq("id", openEntry.id);
         if (finalizeError) throw finalizeError;
         await admin.from("audit_logs").insert({
@@ -158,16 +194,16 @@ Deno.serve(async (req: Request) => {
         const { data: entry, error: updateError } = await admin.from("time_entries").update({ actual_clock_out: now, close_time_adjusted: true }).eq("id", missed.id).select("id,actual_clock_out,payable_clock_out").single();
         if (updateError) throw updateError;
         await admin.from("audit_logs").insert({ organization_id: missed.organization_id, actor_user_id: null, action: "employee_late_clock_out_after_system_close", entity_type: "time_entry", entity_id: entry.id, details: { employee_id: employee.id, store_id: device.store_id, kiosk_device_id: device.id, shared_employee: employee.organization_id !== device.organization_id } });
-        return json(req, { ok: true, action: "clock_out", employee_name: employee.name, timestamp: entry.actual_clock_out, warning: "Clock-out was after the scheduled closing time. Payable time remains capped at store closing." });
+        const response = await offlineSuccess({ ok: true, action: "clock_out", employee_name: employee.name, timestamp: entry.actual_clock_out, warning: "Clock-out was after the scheduled closing time. Payable time remains capped at store closing." }, entry.id);
+        return json(req, response);
       }
       return json(req, { error: "NOT CLOCKED IN" }, 409);
     }
 
     if (requestedAction === "clock_in" && openEntry) {
       if (openEntry.store_id !== device.store_id && openEntry.scheduled_close_at) {
-        const close = DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" });
-        const graceEnds = close.plus({ hours: 1 });
-        if (nowUtc < graceEnds && nowUtc >= close) {
+        const graceEnds = DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" }).plus({ hours: 1 });
+        if (nowUtc < graceEnds && nowUtc >= DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" })) {
           return json(req, { error: "Your previous shift is still in the 60-minute closing grace period. Clock out at the original location or wait until the grace period ends." }, 409);
         }
       }
@@ -187,7 +223,7 @@ Deno.serve(async (req: Request) => {
         if (job) { jobId = job.id; if (job.pay_type && job.pay_rate != null) { payType = job.pay_type; payRate = job.pay_rate; } }
       }
 
-      const payableIn = now;
+      let payableIn = now;
       let warning = null;
       let scheduledOpen: string | null = null;
       let scheduledClose: string | null = null;
@@ -205,7 +241,8 @@ Deno.serve(async (req: Request) => {
       }).select("id,actual_clock_in,payable_clock_in").single();
       if (insertError) throw insertError;
       await admin.from("audit_logs").insert({ organization_id: device.organization_id, actor_user_id: null, action: "employee_clock_in", entity_type: "time_entry", entity_id: entry.id, details: { employee_id: employee.id, employee_source_organization_id: employee.organization_id, shared_employee: employee.organization_id !== device.organization_id, store_id: device.store_id, kiosk_device_id: device.id, store_pay_override: Boolean(storePay), warning } });
-      return json(req, { ok: true, action: "clock_in", employee_name: employee.name, timestamp: entry.actual_clock_in, payable_start: entry.payable_clock_in, warning });
+      const response = await offlineSuccess({ ok: true, action: "clock_in", employee_name: employee.name, timestamp: entry.actual_clock_in, payable_start: entry.payable_clock_in, warning }, entry.id);
+      return json(req, response);
     }
 
     let payableOut = now;
@@ -229,7 +266,8 @@ Deno.serve(async (req: Request) => {
     const { data: entry, error: updateError } = await admin.from("time_entries").update({ actual_clock_out: now, payable_clock_out: payableOut, early_clock_out: early, close_time_adjusted: adjusted || Boolean(openEntry.close_time_adjusted) }).eq("id", openEntry.id).select("id,actual_clock_out,payable_clock_out,early_clock_out,close_time_adjusted").single();
     if (updateError) throw updateError;
     await admin.from("audit_logs").insert({ organization_id: openEntry.organization_id, actor_user_id: null, action: "employee_clock_out", entity_type: "time_entry", entity_id: entry.id, details: { employee_id: employee.id, store_id: openEntry.store_id, kiosk_device_id: device.id, shared_employee: employee.organization_id !== device.organization_id, early_clock_out: early, close_time_adjusted: entry.close_time_adjusted, warning } });
-    return json(req, { ok: true, action: "clock_out", employee_name: employee.name, timestamp: entry.actual_clock_out, warning: warning || (early ? "Clocked out before scheduled store closing." : adjusted ? "Payable time was capped at scheduled store closing." : null) });
+    const response = await offlineSuccess({ ok: true, action: "clock_out", employee_name: employee.name, timestamp: entry.actual_clock_out, warning: warning || (early ? "Clocked out before scheduled store closing." : adjusted ? "Payable time was capped at scheduled store closing." : null) }, entry.id);
+    return json(req, response);
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Unexpected shared punch error";
