@@ -1,6 +1,6 @@
 {
   "name": "onepoint-windows-widget",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Always-on Windows corner widget for OnePoint Time & Attendance",
   "main": "main.js",
