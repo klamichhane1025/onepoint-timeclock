@@ -2,13 +2,13 @@ const { app, BrowserWindow, Menu, Tray, screen, shell, nativeImage, powerMonitor
 const fs = require('fs');
 const path = require('path');
 
-const CLOCK_URL = 'https://cashier.onepointsystems.io/';
+const CLOCK_URL = 'https://cashier.onepointsystems.io/?widget=1';
 const ALLOWED_HOSTS = new Set([
   'cashier.onepointsystems.io',
   'timeclock.onepointsystems.io'
 ]);
-const DEFAULT_WIDTH = 420;
-const DEFAULT_HEIGHT = 680;
+const DEFAULT_WIDTH = 430;
+const DEFAULT_HEIGHT = 600;
 const EDGE_GAP = 14;
 
 let win = null;
@@ -76,7 +76,7 @@ function isVisibleOnAnyDisplay(bounds) {
 function boundsForCorner(corner, display = screen.getPrimaryDisplay(), size = null) {
   const work = display.workArea;
   const width = Math.min(Math.max(size?.width || DEFAULT_WIDTH, 340), work.width - EDGE_GAP * 2);
-  const height = Math.min(Math.max(size?.height || DEFAULT_HEIGHT, 500), work.height - EDGE_GAP * 2);
+  const height = Math.min(Math.max(size?.height || DEFAULT_HEIGHT, 480), work.height - EDGE_GAP * 2);
   const left = work.x + EDGE_GAP;
   const right = work.x + work.width - width - EDGE_GAP;
   const top = work.y + EDGE_GAP;
@@ -204,7 +204,7 @@ function createWindow() {
     ...initial,
     title: 'OnePoint Time Clock',
     minWidth: 340,
-    minHeight: 500,
+    minHeight: 480,
     resizable: true,
     movable: true,
     minimizable: true,
@@ -213,7 +213,7 @@ function createWindow() {
     alwaysOnTop: !!settings.alwaysOnTop,
     autoHideMenuBar: true,
     show: false,
-    backgroundColor: '#0b1118',
+    backgroundColor: '#08111d',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       partition: 'persist:onepoint-pos-widget',
