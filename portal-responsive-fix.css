@@ -1,0 +1,33 @@
+/* Responsive portal stabilization: loaded after all legacy theme styles. */
+html.opPuppertino body.opNavOpen::after{content:none!important}
+.opMobileNavBackdrop{display:none}
+@media(max-width:920px){
+ html.opPuppertino .app,html.opApplePortal .app{display:block!important;grid-template-columns:minmax(0,1fr)!important;width:100%;min-width:0}
+ html.opPuppertino .main{display:block!important;width:100%;min-width:0;max-width:100%;filter:none!important;backdrop-filter:none!important}
+ html.opPuppertino .side{position:fixed!important;inset:0 auto 0 0!important;width:min(300px,85vw)!important;height:100dvh!important;z-index:81!important;transform:translateX(-105%)!important;overflow-y:auto!important;overscroll-behavior:contain}
+ html.opPuppertino body.opNavOpen .side{transform:translateX(0)!important}
+ .opMobileNavBackdrop{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.30);display:none;border:0;padding:0;cursor:pointer}
+ body.opNavOpen .opMobileNavBackdrop{display:block}
+ html.opPuppertino .top,html.opApplePortal .top{min-height:64px;height:auto;padding:10px 14px!important}
+ html.opPuppertino .top #opPupNavToggle{display:grid!important;min-width:44px;min-height:44px;flex-shrink:0;place-content:center}
+ html.opPuppertino .content,html.opPuppertino .content.opPupContent,html.opApplePortal .content{width:100%!important;max-width:100%;min-width:0;padding:16px 12px 48px!important}
+ html.opPuppertino .table{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+ html.opPuppertino .drawer:not(.hidden){z-index:101}
+ html.opPuppertino .back:not(.hidden){z-index:100}
+ html.opPuppertino .opMessageHost:not(.hidden){z-index:9999}
+ html.opPuppertino .row{flex-wrap:wrap}
+ html.opPuppertino .row>.actions{max-width:100%;flex-wrap:wrap}
+ html.opPuppertino .filters,html.opPuppertino .filterGrid{max-width:100%}
+}
+@media(max-width:640px){
+ html.opPuppertino .top h1{font-size:19px;overflow-wrap:anywhere}
+ html.opPuppertino .top .who{margin-left:auto;min-width:0}
+ html.opPuppertino .grid4,html.opPuppertino .summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html.opPuppertino .storeTiles{grid-template-columns:minmax(0,1fr)!important}
+ html.opPuppertino .drawer.modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px);max-height:calc(100dvh - 24px)!important;overflow-y:auto}
+ html.opPuppertino .btn{min-height:44px}
+ html.opPuppertino .field input,html.opPuppertino .field select{min-height:44px;font-size:16px}
+}
+@media(max-width:370px){
+ html.opPuppertino .grid4,html.opPuppertino .summary{grid-template-columns:minmax(0,1fr)!important}
+}
