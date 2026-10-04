@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     const requestedAction = body.requested_action === "clock_in" || body.requested_action === "clock_out" ? body.requested_action : null;
     if (!requestedAction) return json(req, { error: "Choose Clock In or Clock Out." }, 400);
 
-    if (requestedAction === "clock_in" && openEntry && openEntry.scheduled_close_at) {
+    if (requestedAction === "clock_in" && openEntry && openEntry.payroll_logic_snapshot === "dfw" && openEntry.scheduled_close_at) {
       const close = DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" });
       const graceEnds = close.plus({ hours: 1 });
       if (graceEnds <= nowUtc) {
@@ -188,7 +188,7 @@ Deno.serve(async (req: Request) => {
     if (requestedAction === "clock_out" && !openEntry) {
       const since = new Date(Date.now() - 36 * 3600e3).toISOString();
       const { data: missed } = await admin.from("time_entries").select("*")
-        .eq("employee_id", employee.id).eq("store_id", device.store_id).eq("is_void", false).eq("missed_clock_out", true)
+        .eq("employee_id", employee.id).eq("store_id", device.store_id).eq("is_void", false).eq("missed_clock_out", true).eq("payroll_logic_snapshot", "dfw")
         .is("actual_clock_out", null).gte("actual_clock_in", since).order("actual_clock_in", { ascending: false }).limit(1).maybeSingle();
       if (missed) {
         const { data: entry, error: updateError } = await admin.from("time_entries").update({ actual_clock_out: now, close_time_adjusted: true }).eq("id", missed.id).select("id,actual_clock_out,payable_clock_out").single();
@@ -201,7 +201,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (requestedAction === "clock_in" && openEntry) {
-      if (openEntry.store_id !== device.store_id && openEntry.scheduled_close_at) {
+      if (openEntry.store_id !== device.store_id && openEntry.payroll_logic_snapshot === "dfw" && openEntry.scheduled_close_at) {
         const graceEnds = DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" }).plus({ hours: 1 });
         if (nowUtc < graceEnds && nowUtc >= DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" })) {
           return json(req, { error: "Your previous shift is still in the 60-minute closing grace period. Clock out at the original location or wait until the grace period ends." }, 409);
@@ -251,7 +251,7 @@ Deno.serve(async (req: Request) => {
     let adjusted = false;
     let closeUtc = openEntry.scheduled_close_at ? DateTime.fromISO(openEntry.scheduled_close_at, { zone: "utc" }) : null;
     if (!closeUtc) { const window = await operatingWindow(openEntry.actual_clock_in); if (window) closeUtc = window.close.toUTC(); }
-    if (closeUtc) {
+    if (closeUtc && openEntry.payroll_logic_snapshot === "dfw") {
       early = nowUtc < closeUtc;
       adjusted = nowUtc > closeUtc;
       const payableIn = DateTime.fromISO(openEntry.payable_clock_in || openEntry.actual_clock_in, { zone: "utc" });
