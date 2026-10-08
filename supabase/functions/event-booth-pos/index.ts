@@ -117,8 +117,15 @@ Deno.serve(async req=>{
   }
   const {data:sales,error:salesError}=await admin.from("event_booth_sales").select("id,payment,total_cents,created_at,voided_at,event_booth_sale_items(name_snapshot,quantity,price_cents)").eq("shift_id",shift.id).order("created_at",{ascending:false}).limit(250);
   if(salesError) throw salesError;
-  const cash=(sales||[]).filter(x=>!x.voided_at&&x.payment==="cash").reduce((n,x)=>n+x.total_cents,0);
-  const card=(sales||[]).filter(x=>!x.voided_at&&x.payment==="card").reduce((n,x)=>n+x.total_cents,0);
+  // Aggregate every sale, not just the 250 shown on screen. Supabase paginates at 1000 by default.
+  let cash=0,card=0,offset=0;
+  while(true){
+   const {data:batch,error:batchError}=await admin.from("event_booth_sales").select("payment,total_cents,voided_at").eq("shift_id",shift.id).order("id").range(offset,offset+999);
+   if(batchError) throw batchError;
+   for(const row of batch||[]) if(!row.voided_at){if(row.payment==="cash")cash+=row.total_cents;else if(row.payment==="card")card+=row.total_cents;}
+   if((batch||[]).length<1000)break;
+   offset+=1000;
+  }
   const {data:history}=await admin.from("event_booth_shifts").select("id,started_at,ended_at,expected_cash_cents,expected_card_cents,variance_cents").eq("employee_id",employee.id).eq("event_code",eventCode).not("ended_at","is",null).order("ended_at",{ascending:false}).limit(30);
   return send(req,{ok:true,session_token:body.action==="login"?sessionToken:undefined,employee:{id:employee.id,name:employee.name,employee_number:employee.employee_number},store:store.name,shift:{id:shift.id,started_at:shift.started_at},products:listing,sales:sales||[],cash_cents:cash,card_cents:card,history:history||[]});
  }catch(e){
