@@ -1,0 +1,11 @@
+(()=>{if(window.onePointTime)return;
+ const validZone=z=>{const v=String(z||'UTC');try{new Intl.DateTimeFormat('en-US',{timeZone:v}).format(new Date());return v}catch{return'UTC'}};
+ const parts=(value,tz,withSeconds=false)=>{if(!value)return null;const d=value instanceof Date?value:new Date(value);if(Number.isNaN(d.getTime()))return null;const out={};for(const p of new Intl.DateTimeFormat('en-CA',{timeZone:validZone(tz),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:withSeconds?'2-digit':undefined,hourCycle:'h23'}).formatToParts(d)){if(p.type!=='literal')out[p.type]=p.value}return out};
+ const dateKey=(value,tz)=>{const p=parts(value,tz);return p?`${p.year}-${p.month}-${p.day}`:''};
+ const format=(value,tz)=>{if(!value)return'—';const d=value instanceof Date?value:new Date(value);if(Number.isNaN(d.getTime()))return'—';return new Intl.DateTimeFormat(undefined,{timeZone:validZone(tz),year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(d)};
+ const inputValue=(value,tz)=>{const p=parts(value,tz);return p?`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`:''};
+ const toIso=(localValue,tz)=>{if(!localValue)return null;const m=String(localValue).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);if(!m)throw new Error('Invalid date/time.');const target=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],0);let guess=target;const zone=validZone(tz);for(let i=0;i<3;i++){const p=parts(new Date(guess),zone,true);if(!p)break;const shown=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);guess-=shown-target}return new Date(guess).toISOString()};
+ const isNextDay=(clockIn,clockOut,tz)=>{if(!clockIn||!clockOut)return false;const a=dateKey(clockIn,tz),b=dateKey(clockOut,tz);return Boolean(a&&b&&b>a)};
+ const style=document.createElement('style');style.textContent=`.opNextDayClockOut{display:inline-flex;align-items:center;padding:3px 7px;border-radius:7px;background:#fff1f0;color:#b42318;font-weight:750;border:1px solid #f3c2bd}.opTimeZoneHint{color:#8e8e93;font-size:10.5px;margin-left:4px}`;document.head.appendChild(style);
+ window.onePointTime={validZone,format,dateKey,inputValue,toIso,isNextDay};
+})();
