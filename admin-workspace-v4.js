@@ -48,7 +48,7 @@ document.addEventListener('click',async e=>{if(!ready)return;const t=e.target.cl
  if(t.id==='awCancel'){close();return}
  if(t.id==='awInviteOwner'){ownerInviteModal();return}
  if(t.id==='awoSend'){await invokeInvite({action:'invite_owner',display_name:$('#awoName').value.trim(),email:$('#awoEmail').value.trim(),business_name:$('#awoBiz').value.trim(),plan:$('#awoPlan').value});close();await loadOrgs();renderOrganizations();show('Owner invitation sent.','Owner','success');return}
- if(t.classList.contains('awOpen')){selectedOrg=orgs.find(o=>o.id===t.dataset.org);tab='overview';await loadSnap();renderOwner();return}
+ if(t.classList.contains('awOpen')){selectedOrg=orgs.find(o=>o.id===t.dataset.org);tab='overview';sessionStorage.setItem('onepoint_admin_selected_org',selectedOrg?.id||'');window.onePointPageState?.save?.('overview');await loadSnap();renderOwner();return}
  if(t.classList.contains('awEditOwner')){const org=orgs.find(o=>o.id===t.dataset.org),owner=(org.organization_users||[]).find(x=>x.id===t.dataset.owner);ownerEditModal(org,owner);return}
  if(t.id==='awoeSave'){await invokeInvite({action:'update_owner',membership_id:editOwner.owner.id,display_name:$('#awoeName').value.trim(),business_name:$('#awoeBiz').value.trim(),email:$('#awoeEmail').value.trim().toLowerCase()});close();await loadOrgs();renderOrganizations();show('Owner updated.','Owner','success');return}
  if(t.id==='awAddEmp'){employeeModal();return}
@@ -88,7 +88,7 @@ document.addEventListener('click',async e=>{if(!ready)return;const t=e.target.cl
 },true);
 document.addEventListener('dblclick',e=>{if(!ready||tab!=='timesheets')return;const r=e.target.closest('.awTs');if(!r||e.target.closest('button'))return;const x=snap.time_entries.find(v=>v.id===r.dataset.id);if(x)timesheetModal(x)},true);
 document.addEventListener('change',async e=>{if(!ready)return;const el=e.target;try{if(el.classList.contains('awPlan')){const{error}=await sb.from('organizations').update({plan:el.value}).eq('id',el.dataset.org);if(error)throw error;show('Plan updated.','Plan','success')}if(el.id==='awoInfinity'){$('#awoEnd').disabled=el.checked;if(el.checked)$('#awoEnd').value=''}}catch(err){show(err.message||String(err))}},true);
-async function boot(){try{if(!await verify())return;ready=true;await loadOrgs();renderOrganizations();window.onePointAdminWorkspace={version:4,renderOrganizations,refresh}}catch(e){console.error(e);show(e.message||String(e),'Admin Portal')}}
+async function boot(){try{if(!await verify())return;ready=true;await loadOrgs();const savedOrg=sessionStorage.getItem('onepoint_admin_selected_org'),savedTab=sessionStorage.getItem('onepoint:active-page:/admin');if(savedOrg&&savedTab&&savedTab!=='organizations'){selectedOrg=orgs.find(o=>o.id===savedOrg)||null;if(selectedOrg){tab=savedTab;await loadSnap();renderOwner()}else renderOrganizations()}else renderOrganizations();window.onePointAdminWorkspace={version:4,renderOrganizations,refresh}}catch(e){console.error(e);show(e.message||String(e),'Admin Portal')}}
 let tries=0;const timer=setInterval(async()=>{tries++;const{data:{session}}=await sb.auth.getSession();if(session){clearInterval(timer);boot()}else if(tries>=40)clearInterval(timer)},150);
 sb.auth.onAuthStateChange((event,s)=>{if(event==='SIGNED_IN'&&s&&ready&&!selectedOrg)setTimeout(async()=>{await loadOrgs();renderOrganizations()},0)});
 })();
