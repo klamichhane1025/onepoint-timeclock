@@ -4,8 +4,8 @@ const SUPABASE_URL='https://eomgnaulupqiwjzcimqt.supabase.co',KEY='sb_publishabl
 const sb=window.onePointSupabase||window.supabase.createClient(SUPABASE_URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const show=(m,t='Correct Timesheet',type='error')=>window.onePointMessage?window.onePointMessage(m,t,type):window.alert(m);
 const pad=n=>String(n).padStart(2,'0');
-const toLocalInput=v=>{if(!v)return'';const d=new Date(v);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
-const fromLocalInput=v=>v?new Date(v):null;
+const toPunchInput=(e,kind)=>{const tz=e.timezone_snapshot||e.stores?.timezone||'UTC',instant=kind==='in'?e.actual_clock_in:e.actual_clock_out,local=kind==='in'?e.actual_clock_in_local:e.actual_clock_out_local;return window.onePointTime?.punchInput?.(instant,local,tz)||''};
+const fromPunchInput=(v,e)=>v?(window.onePointTime?.toIso?new Date(window.onePointTime.toIso(v,e.timezone_snapshot||e.stores?.timezone||'UTC')):new Date(v)):null;
 let activeCell=null,busy=false;
 
 function decorate(){
@@ -32,11 +32,10 @@ async function openCell(cell){
  if(activeCell&&activeCell!==cell){window.onePointOwnerPayroll?.render?.();setTimeout(()=>openCell(findCell(id,kind)),80);return}
  busy=true;
  try{
-   const{data:e,error}=await sb.from('time_entries').select('id,actual_clock_in,actual_clock_out,is_void').eq('id',id).maybeSingle();
+   const{data:e,error}=await sb.from('time_entries').select('id,actual_clock_in,actual_clock_out,actual_clock_in_local,actual_clock_out_local,timezone_snapshot,is_void,stores(timezone)').eq('id',id).maybeSingle();
    if(error)throw error;if(!e)throw new Error('Clock record not found.');if(e.is_void)throw new Error('Restore this record before editing it.');
    activeCell=cell;
-   const current=kind==='in'?e.actual_clock_in:e.actual_clock_out;
-   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toLocalInput(current)}"><input class="opPunchReason" type="text" placeholder="Reason (optional)"><button class="btn primary opPunchSave" title="Save">✓</button><button class="btn secondary opPunchCancel" title="Cancel">✕</button></div>`;
+   cell.innerHTML=`<div class="opPunchEditor"><input class="opPunchValue" type="datetime-local" value="${toPunchInput(e,kind)}"><input class="opPunchReason" type="text" placeholder="Reason (optional)"><button class="btn primary opPunchSave" title="Save">✓</button><button class="btn secondary opPunchCancel" title="Cancel">✕</button></div>`;
    const input=cell.querySelector('.opPunchValue');input?.focus();input?.select?.();
  }catch(err){show(err?.message||String(err))}finally{busy=false}
 }
@@ -46,10 +45,10 @@ async function saveCell(cell){
  const row=cell?.closest('tr.v4EditableRow'),id=row?.dataset.entryId,kind=cell?.dataset.punchKind;if(!id||!kind)return;
  const value=cell.querySelector('.opPunchValue')?.value||'',reason=cell.querySelector('.opPunchReason')?.value.trim()||'';
  if(kind==='in'&&!value)return show('Clock In cannot be blank.');
- const changed=fromLocalInput(value);if(value&&(!changed||Number.isNaN(changed.getTime())))return show('Enter a valid date and time.');
+ const changed=fromPunchInput(value,e);if(value&&(!changed||Number.isNaN(changed.getTime())))return show('Enter a valid date and time.');
  const btn=cell.querySelector('.opPunchSave');if(btn){btn.disabled=true;btn.textContent='…'}
  try{
-   const[{data:e,error},{data:{session}}]=await Promise.all([sb.from('time_entries').select('actual_clock_in,actual_clock_out,is_void').eq('id',id).maybeSingle(),sb.auth.getSession()]);
+   const[{data:e,error},{data:{session}}]=await Promise.all([sb.from('time_entries').select('actual_clock_in,actual_clock_out,actual_clock_in_local,actual_clock_out_local,timezone_snapshot,is_void,stores(timezone)').eq('id',id).maybeSingle(),sb.auth.getSession()]);
    if(error)throw error;if(!e)throw new Error('Clock record not found.');if(e.is_void)throw new Error('Restore this record before editing it.');if(!session)throw new Error('Your Owner session expired. Sign in again.');
    const inVal=kind==='in'?changed:new Date(e.actual_clock_in),outVal=kind==='out'?(value?changed:null):(e.actual_clock_out?new Date(e.actual_clock_out):null);
    if(!inVal||Number.isNaN(inVal.getTime()))throw new Error('Clock In is invalid.');
