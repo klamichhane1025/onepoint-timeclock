@@ -6,6 +6,13 @@
  const inputValue=(value,tz)=>{const p=parts(value,tz);return p?`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`:''};
  const toIso=(localValue,tz)=>{if(!localValue)return null;const m=String(localValue).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);if(!m)throw new Error('Invalid date/time.');const target=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],0);let guess=target;const zone=validZone(tz);for(let i=0;i<3;i++){const p=parts(new Date(guess),zone,true);if(!p)break;const shown=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);guess-=shown-target}return new Date(guess).toISOString()};
  const isNextDay=(clockIn,clockOut,tz)=>{if(!clockIn||!clockOut)return false;const a=dateKey(clockIn,tz),b=dateKey(clockOut,tz);return Boolean(a&&b&&b>a)};
+ const parseLocal=v=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);return m?{year:m[1],month:m[2],day:m[3],hour:m[4],minute:m[5],second:m[6]||'00'}:null};
+ const formatLocal=v=>{const p=parseLocal(v);if(!p)return'—';const d=new Date(Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second));return new Intl.DateTimeFormat(undefined,{timeZone:'UTC',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(d)};
+ const inputLocal=v=>{const p=parseLocal(v);return p?`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`:''};
+ const punchFormat=(instant,local,tz)=>local?formatLocal(local):format(instant,tz);
+ const punchInput=(instant,local,tz)=>local?inputLocal(local):inputValue(instant,tz);
+ const punchDateKey=(instant,local,tz)=>{const p=parseLocal(local);return p?`${p.year}-${p.month}-${p.day}`:dateKey(instant,tz)};
+ const isNextPunchDay=(entry)=>{const tz=entry?.timezone_snapshot||'UTC',a=punchDateKey(entry?.actual_clock_in,entry?.actual_clock_in_local,tz),b=punchDateKey(entry?.actual_clock_out,entry?.actual_clock_out_local,tz);return Boolean(a&&b&&b>a)};
  const style=document.createElement('style');style.textContent=`.opNextDayClockOut{display:inline-flex;align-items:center;padding:3px 7px;border-radius:7px;background:#fff1f0;color:#b42318;font-weight:750;border:1px solid #f3c2bd}.opTimeZoneHint{color:#8e8e93;font-size:10.5px;margin-left:4px}`;document.head.appendChild(style);
- window.onePointTime={validZone,format,dateKey,inputValue,toIso,isNextDay};
+ window.onePointTime={validZone,format,dateKey,inputValue,toIso,isNextDay,parseLocal,formatLocal,inputLocal,punchFormat,punchInput,punchDateKey,isNextPunchDay};
 })();
